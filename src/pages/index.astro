@@ -1,17 +1,185 @@
 ---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { readExportJson } from "../lib/exports";
 
+interface SiteExport {
+  generated: string;
+  stats: {
+    devices: number;
+    hubs: number;
+    manufacturers: number;
+    categories: number;
+    protocols: number;
+  };
+  protocolCounts: Record<string, number>;
+}
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  model: string | null;
+  primaryProtocol: string | null;
+  manufacturer: {
+    name: string;
+  };
+  compatibilityStatuses: string[];
+}
+
+interface ProductsExport {
+  products: ProductSummary[];
+}
+
+const site = await readExportJson<SiteExport>("site.json");
+const products = await readExportJson<ProductsExport>("products.json");
+
+const stats = [
+  { label: "Devices tracked", value: site.stats.devices },
+  { label: "Hub profiles", value: site.stats.hubs },
+  { label: "Manufacturers", value: site.stats.manufacturers },
+  { label: "Protocols", value: site.stats.protocols },
+];
+
+const protocolSummary = Object.entries(site.protocolCounts).filter(
+  ([, count]) => count > 0,
+);
+const featuredProducts = products.products.slice(0, 4);
+const lastGenerated = new Date(site.generated).toLocaleString("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+  title="SmartPicker | Astro Foundation"
+  description="Tailwind-enabled SmartPicker homepage for validating layout, styling, and local export data."
+>
+  <section
+    class="grid gap-10 pt-6 pb-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-end"
+  >
+    <div class="space-y-6">
+      <p
+        class="border-brand/20 text-brand-strong inline-flex rounded-full border bg-white/70 px-4 py-2 text-xs font-semibold tracking-[0.24em] uppercase"
+      >
+        Astro foundation in progress
+      </p>
+      <div class="space-y-4">
+        <h1
+          class="max-w-3xl text-5xl font-semibold tracking-tight text-balance sm:text-6xl"
+        >
+          Compatibility research that feels fast, structured, and trustworthy.
+        </h1>
+        <p class="text-muted max-w-2xl text-lg leading-8">
+          This first pass gives us a real Tailwind-powered homepage with live
+          export data, a reusable site shell, and enough visual surface area to
+          validate the design direction before we build the catalog pages.
+        </p>
+      </div>
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <a
+          href="/devices"
+          class="bg-brand shadow-brand/30 hover:bg-brand-strong inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+        >
+          Browse devices
+        </a>
+        <a
+          href="/about"
+          class="border-border text-foreground inline-flex items-center justify-center rounded-full border bg-white/70 px-6 py-3 text-sm font-semibold hover:bg-white"
+        >
+          View about page
+        </a>
+      </div>
+    </div>
+
+    <aside class="panel p-6">
+      <p class="text-muted text-sm font-medium">Current export snapshot</p>
+      <p class="text-foreground mt-2 text-3xl font-semibold">{lastGenerated}</p>
+      <p class="text-muted mt-4 text-sm leading-7">
+        The page is reading directly from <code>data/exports/site.json</code> and
+        <code>data/exports/products.json</code>, which gives us a quick
+        end-to-end check for build-time content loading.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-2">
+        {
+          protocolSummary.map(([protocol, count]) => (
+            <span class="border-border text-brand-strong rounded-full border bg-white/75 px-3 py-1 text-xs font-semibold tracking-wide uppercase">
+              {protocol} {count}
+            </span>
+          ))
+        }
+      </div>
+    </aside>
+  </section>
+
+  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    {
+      stats.map((stat) => (
+        <article class="panel p-5">
+          <p class="text-muted text-sm">{stat.label}</p>
+          <p class="mt-3 text-4xl font-semibold tracking-tight">{stat.value}</p>
+        </article>
+      ))
+    }
+  </section>
+
+  <section class="grid gap-6 py-12 lg:grid-cols-[0.9fr_1.1fr]">
+    <article class="panel p-6">
+      <p
+        class="text-brand-strong text-sm font-semibold tracking-[0.24em] uppercase"
+      >
+        What this validates
+      </p>
+      <ul class="text-muted mt-5 space-y-4 text-sm leading-7">
+        <li>Tailwind v4 is active inside Astro components.</li>
+        <li>Global theme tokens are centralized and reusable.</li>
+        <li>Filesystem export loading works during page generation.</li>
+        <li>The base layout is ready for shared navigation and metadata.</li>
+      </ul>
+    </article>
+
+    <div class="panel p-6">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p
+            class="text-brand-strong text-sm font-semibold tracking-[0.24em] uppercase"
+          >
+            Featured devices
+          </p>
+          <h2 class="mt-2 text-2xl font-semibold tracking-tight">
+            Starter card pattern
+          </h2>
+        </div>
+        <span
+          class="border-border text-muted rounded-full border bg-white/75 px-3 py-1 text-xs font-medium"
+        >
+          {products.products.length} imported
+        </span>
+      </div>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        {
+          featuredProducts.map((product) => (
+            <article class="border-border rounded-3xl border bg-white/75 p-5">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="text-muted text-sm">{product.manufacturer.name}</p>
+                  <h3 class="text-foreground mt-1 text-lg font-semibold">
+                    {product.name}
+                  </h3>
+                </div>
+                <span class="bg-brand/10 text-brand-strong rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase">
+                  {product.primaryProtocol ?? "Unknown"}
+                </span>
+              </div>
+              <p class="text-muted mt-4 text-sm">
+                Model: {product.model ?? "N/A"}
+              </p>
+              <p class="text-muted mt-2 text-sm">
+                Status: {product.compatibilityStatuses[0] ?? "Unclassified"}
+              </p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

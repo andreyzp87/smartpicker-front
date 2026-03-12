@@ -1,43 +1,58 @@
-# Astro Starter Kit: Minimal
+# SmartPicker Frontend
+
+Astro frontend for `smartpicker.io`, currently targeting Node deployment with Tailwind and React available where needed.
+
+## Setup
 
 ```sh
-pnpm create astro@latest -- --template minimal
+pnpm install
+pnpm dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Local environment defaults live in `.env`, and the tracked template is `.env.example`.
 
-## 🚀 Project Structure
+## Environment
 
-Inside of your Astro project, you'll see the following folders and files:
+```dotenv
+PUBLIC_SITE_URL=https://smartpicker.io
+EXPORTS_SOURCE=local
+EXPORTS_DIR=./data/exports
+CMS_EXPORTS_URL=
+```
+
+- `PUBLIC_SITE_URL` powers the Astro `site` setting for canonical URLs and sitemap generation.
+- `EXPORTS_SOURCE=local` reads JSON exports from the filesystem during development.
+- `CMS_EXPORTS_URL` is only needed when `EXPORTS_SOURCE=remote`.
+
+## Project Structure
 
 ```text
 /
+├── data/
+├── docs/
 ├── public/
 ├── src/
-│   └── pages/
-│       └── index.astro
+│   ├── layouts/
+│   ├── lib/
+│   ├── pages/
+│   └── styles/
 └── package.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Commands
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+| Command               | Action                                                 |
+| :-------------------- | :----------------------------------------------------- |
+| `pnpm dev`            | Start the local Astro dev server                       |
+| `pnpm build`          | Build the Node-targeted production bundle              |
+| `pnpm preview`        | Preview the production build locally                   |
+| `pnpm format`         | Format the repo with Prettier                          |
+| `pnpm lint`           | Run ESLint across Astro, JS, and TS files              |
+| `pnpm check`          | Run `astro check` for Astro and TypeScript diagnostics |
+| `pnpm validate`       | Run formatting, linting, type checks, and build        |
+| `pnpm generate-types` | Regenerate Wrangler worker type definitions            |
 
-Any static assets, like images, can be placed in the `public/` directory.
+## Notes
 
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- The project is configured for Node deployment for now.
+- Sitemap generation is enabled and uses `PUBLIC_SITE_URL`.
