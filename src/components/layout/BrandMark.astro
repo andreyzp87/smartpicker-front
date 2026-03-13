@@ -1,0 +1,16 @@
+---
+interface Props {
+  href?: string;
+}
+
+const { href = "/" } = Astro.props;
+---
+
+<a href={href} class="flex items-center gap-2.5 text-primary" aria-label="SmartPicker home">
+  <div class="shadow-blue flex h-8 w-8 items-center justify-center rounded-lg bg-blue-gradient text-base font-bold text-white">
+    S
+  </div>
+  <div class="text-lg font-bold tracking-tight">
+    Smart<span class="text-blue">Picker</span>
+  </div>
+</a>

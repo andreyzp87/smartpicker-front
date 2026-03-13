@@ -1,5 +1,12 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import HomeFeaturedDeviceCard from "../components/home/HomeFeaturedDeviceCard.astro";
+import HomeHero from "../components/home/HomeHero.astro";
+import HomeHubCard from "../components/home/HomeHubCard.astro";
+import HomeManufacturerCard from "../components/home/HomeManufacturerCard.astro";
+import HomeProtocolCard from "../components/home/HomeProtocolCard.astro";
+import HomeSnapshotCta from "../components/home/HomeSnapshotCta.astro";
+import SectionHeader from "../components/ui/SectionHeader.astro";
 import { readExportJson } from "../lib/exports";
 
 interface SiteExport {
@@ -11,7 +18,8 @@ interface SiteExport {
     categories: number;
     protocols: number;
   };
-  protocolCounts: Record<string, number>;
+  featuredDeviceSlugs: string[];
+  recentlyUpdatedDeviceSlugs: string[];
 }
 
 interface ProductSummary {
@@ -19,167 +27,216 @@ interface ProductSummary {
   name: string;
   model: string | null;
   primaryProtocol: string | null;
+  localControl: boolean | null;
+  cloudDependent: boolean | null;
+  requiresHub: boolean | null;
   manufacturer: {
+    slug: string;
     name: string;
-  };
+  } | null;
+  compatibleHubSlugs: string[];
   compatibilityStatuses: string[];
+  updatedAt: string;
 }
 
 interface ProductsExport {
+  count: number;
   products: ProductSummary[];
+}
+
+interface ProtocolSummary {
+  slug: string;
+  name: string;
+  description: string;
+  deviceCount: number;
+}
+
+interface ProtocolsExport {
+  protocols: ProtocolSummary[];
+}
+
+interface HubSummary {
+  slug: string;
+  name: string;
+  description: string | null;
+  deviceCount: number;
+  protocolsSupported: string[];
+}
+
+interface HubsExport {
+  hubs: HubSummary[];
+}
+
+interface ManufacturerSummary {
+  slug: string;
+  name: string;
+  deviceCount: number;
+}
+
+interface ManufacturersExport {
+  manufacturers: ManufacturerSummary[];
 }
 
 const site = await readExportJson<SiteExport>("site.json");
 const products = await readExportJson<ProductsExport>("products.json");
-
-const stats = [
-  { label: "Devices tracked", value: site.stats.devices },
-  { label: "Hub profiles", value: site.stats.hubs },
-  { label: "Manufacturers", value: site.stats.manufacturers },
-  { label: "Protocols", value: site.stats.protocols },
-];
-
-const protocolSummary = Object.entries(site.protocolCounts).filter(
-  ([, count]) => count > 0,
+const protocols = await readExportJson<ProtocolsExport>("protocols.json");
+const hubs = await readExportJson<HubsExport>("hubs.json");
+const manufacturers = await readExportJson<ManufacturersExport>(
+  "manufacturers.json",
 );
-const featuredProducts = products.products.slice(0, 4);
-const lastGenerated = new Date(site.generated).toLocaleString("en-US", {
+
+const productBySlug = new Map(products.products.map((product) => [product.slug, product]));
+const featuredDevices = site.featuredDeviceSlugs
+  .map((slug) => productBySlug.get(slug))
+  .filter((product): product is ProductSummary => Boolean(product))
+  .slice(0, 4);
+const recentDevices = site.recentlyUpdatedDeviceSlugs
+  .map((slug) => productBySlug.get(slug))
+  .filter((product): product is ProductSummary => Boolean(product))
+  .slice(0, 3);
+const topManufacturers = [...manufacturers.manufacturers]
+  .sort((left, right) => right.deviceCount - left.deviceCount)
+  .slice(0, 6);
+
+const searchChips = [
+  products.products[0]?.manufacturer?.name,
+  featuredDevices[0]?.name,
+  protocols.protocols.find((protocol) => protocol.deviceCount > 0)?.name,
+  recentDevices[0]?.model,
+]
+  .filter((value): value is string => Boolean(value))
+  .slice(0, 4);
+
+const formatCount = new Intl.NumberFormat("en-US");
+const generatedLabel = new Date(site.generated).toLocaleString("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+const recentDevicesLabel =
+  recentDevices.length > 0
+    ? recentDevices.map((device) => device.name).join(", ")
+    : "the latest published device entries";
 ---
 
 <BaseLayout
-  title="SmartPicker | Astro Foundation"
-  description="Tailwind-enabled SmartPicker homepage for validating layout, styling, and local export data."
+  title="SmartPicker | Find Compatible Smart Home Devices"
+  description="Search smart home devices, compare protocol coverage, and explore hub compatibility using SmartPicker export data."
 >
-  <section
-    class="grid gap-10 pt-6 pb-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-end"
-  >
-    <div class="space-y-6">
-      <p
-        class="border-brand/20 text-brand-strong inline-flex rounded-full border bg-white/70 px-4 py-2 text-xs font-semibold tracking-[0.24em] uppercase"
-      >
-        Astro foundation in progress
-      </p>
-      <div class="space-y-4">
-        <h1
-          class="max-w-3xl text-5xl font-semibold tracking-tight text-balance sm:text-6xl"
-        >
-          Compatibility research that feels fast, structured, and trustworthy.
-        </h1>
-        <p class="text-muted max-w-2xl text-lg leading-8">
-          This first pass gives us a real Tailwind-powered homepage with live
-          export data, a reusable site shell, and enough visual surface area to
-          validate the design direction before we build the catalog pages.
-        </p>
-      </div>
-      <div class="flex flex-col gap-3 sm:flex-row">
-        <a
-          href="/devices"
-          class="bg-brand shadow-brand/30 hover:bg-brand-strong inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
-        >
-          Browse devices
-        </a>
-        <a
-          href="/about"
-          class="border-border text-foreground inline-flex items-center justify-center rounded-full border bg-white/70 px-6 py-3 text-sm font-semibold hover:bg-white"
-        >
-          View about page
-        </a>
-      </div>
-    </div>
+  <HomeHero
+    indexedDevices={formatCount.format(site.stats.devices)}
+    searchChips={searchChips}
+    stats={[
+      { value: formatCount.format(site.stats.devices), label: "Devices" },
+      { value: formatCount.format(site.stats.manufacturers), label: "Manufacturers" },
+      { value: formatCount.format(site.stats.hubs), label: "Hubs" },
+      { value: formatCount.format(site.stats.protocols), label: "Protocols" },
+    ]}
+  />
 
-    <aside class="panel p-6">
-      <p class="text-muted text-sm font-medium">Current export snapshot</p>
-      <p class="text-foreground mt-2 text-3xl font-semibold">{lastGenerated}</p>
-      <p class="text-muted mt-4 text-sm leading-7">
-        The page is reading directly from <code>data/exports/site.json</code> and
-        <code>data/exports/products.json</code>, which gives us a quick
-        end-to-end check for build-time content loading.
-      </p>
-      <div class="mt-6 flex flex-wrap gap-2">
-        {
-          protocolSummary.map(([protocol, count]) => (
-            <span class="border-border text-brand-strong rounded-full border bg-white/75 px-3 py-1 text-xs font-semibold tracking-wide uppercase">
-              {protocol} {count}
-            </span>
-          ))
-        }
-      </div>
-    </aside>
-  </section>
-
-  <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    {
-      stats.map((stat) => (
-        <article class="panel p-5">
-          <p class="text-muted text-sm">{stat.label}</p>
-          <p class="mt-3 text-4xl font-semibold tracking-tight">{stat.value}</p>
-        </article>
-      ))
-    }
-  </section>
-
-  <section class="grid gap-6 py-12 lg:grid-cols-[0.9fr_1.1fr]">
-    <article class="panel p-6">
-      <p
-        class="text-brand-strong text-sm font-semibold tracking-[0.24em] uppercase"
-      >
-        What this validates
-      </p>
-      <ul class="text-muted mt-5 space-y-4 text-sm leading-7">
-        <li>Tailwind v4 is active inside Astro components.</li>
-        <li>Global theme tokens are centralized and reusable.</li>
-        <li>Filesystem export loading works during page generation.</li>
-        <li>The base layout is ready for shared navigation and metadata.</li>
-      </ul>
-    </article>
-
-    <div class="panel p-6">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <p
-            class="text-brand-strong text-sm font-semibold tracking-[0.24em] uppercase"
-          >
-            Featured devices
-          </p>
-          <h2 class="mt-2 text-2xl font-semibold tracking-tight">
-            Starter card pattern
-          </h2>
-        </div>
-        <span
-          class="border-border text-muted rounded-full border bg-white/75 px-3 py-1 text-xs font-medium"
-        >
-          {products.products.length} imported
-        </span>
-      </div>
-
-      <div class="mt-6 grid gap-4 md:grid-cols-2">
-        {
-          featuredProducts.map((product) => (
-            <article class="border-border rounded-3xl border bg-white/75 p-5">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="text-muted text-sm">{product.manufacturer.name}</p>
-                  <h3 class="text-foreground mt-1 text-lg font-semibold">
-                    {product.name}
-                  </h3>
-                </div>
-                <span class="bg-brand/10 text-brand-strong rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase">
-                  {product.primaryProtocol ?? "Unknown"}
-                </span>
-              </div>
-              <p class="text-muted mt-4 text-sm">
-                Model: {product.model ?? "N/A"}
-              </p>
-              <p class="text-muted mt-2 text-sm">
-                Status: {product.compatibilityStatuses[0] ?? "Unclassified"}
-              </p>
-            </article>
-          ))
-        }
-      </div>
+  <section id="protocols" class="mx-auto mt-20 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Browse by Protocol"
+      description="Every protocol export is surfaced here, even when the current snapshot has zero matching devices."
+      actionHref="/protocols"
+      actionLabel="See all protocols"
+    />
+    <div class="grid grid-cols-5 gap-3 max-lg:grid-cols-3 max-md:grid-cols-2">
+      {
+        protocols.protocols.map((protocol) => (
+          <HomeProtocolCard
+            href={`/protocols/${protocol.slug}`}
+            slug={protocol.slug}
+            description={protocol.description}
+            deviceCount={formatCount.format(protocol.deviceCount)}
+          />
+        ))
+      }
     </div>
   </section>
+
+  <section class="mx-auto mt-16 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Featured Devices"
+      description="Pulled in the same order as `featuredDeviceSlugs` from the current site export."
+      actionHref="/devices"
+      actionLabel="Browse all"
+    />
+
+    <div class="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+      {
+        featuredDevices.map((device) => (
+          <HomeFeaturedDeviceCard
+            href={`/devices/${device.slug}`}
+            name={device.name}
+            manufacturerName={device.manufacturer?.name ?? "Unknown manufacturer"}
+            model={device.model}
+            protocolSlug={device.primaryProtocol}
+            compatibilityStatus={device.compatibilityStatuses[0] ?? null}
+            hubCount={device.compatibleHubSlugs.length}
+            requiresHub={device.requiresHub}
+            localControl={device.localControl}
+            updatedLabel={new Date(device.updatedAt).toLocaleDateString("en-US", {
+              dateStyle: "medium",
+            })}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto mt-16 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Compatible Hubs & Platforms"
+      description="Hub coverage pulled from the exported hub index."
+      actionHref="/hubs"
+      actionLabel="View all"
+    />
+
+    <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+      {
+        hubs.hubs.map((hub) => (
+          <HomeHubCard
+            href={`/hubs/${hub.slug}`}
+            name={hub.name}
+            protocolSlugs={hub.protocolsSupported}
+            description={hub.description}
+            deviceCount={formatCount.format(hub.deviceCount)}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <section id="manufacturers" class="mx-auto mt-16 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Manufacturers in This Snapshot"
+      description="Category exports are still empty, so the home page highlights the brands currently represented in `manufacturers.json`."
+      actionHref="/devices"
+      actionLabel="Explore devices"
+    />
+
+    <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+      {
+        topManufacturers.map((manufacturer) => (
+          <HomeManufacturerCard
+            href={`/manufacturers/${manufacturer.slug}`}
+            name={manufacturer.name}
+            deviceCount={formatCount.format(manufacturer.deviceCount)}
+            initials={manufacturer.name
+              .split(" ")
+              .slice(0, 2)
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <HomeSnapshotCta
+    generatedLabel={generatedLabel}
+    recentDevicesLabel={recentDevicesLabel}
+  />
 </BaseLayout>

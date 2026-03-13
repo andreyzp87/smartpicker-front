@@ -1,0 +1,74 @@
+---
+import CompatibilityBadge from "../ui/CompatibilityBadge.astro";
+import ProtocolBadge from "../ui/ProtocolBadge.astro";
+import { getProtocolStyle } from "../../lib/ui";
+
+interface Props {
+  href: string;
+  name: string;
+  manufacturerName: string;
+  model?: string | null;
+  protocolSlug?: string | null;
+  compatibilityStatus?: string | null;
+  hubCount: number;
+  requiresHub?: boolean | null;
+  localControl?: boolean | null;
+  updatedLabel: string;
+}
+
+const {
+  href,
+  name,
+  manufacturerName,
+  model,
+  protocolSlug,
+  compatibilityStatus,
+  hubCount,
+  requiresHub,
+  localControl,
+  updatedLabel,
+} = Astro.props;
+const style = getProtocolStyle(protocolSlug);
+---
+
+<a href={href} class="card-hover flex flex-col rounded-2xl border border-theme bg-surface p-5 text-primary">
+  <div class="mb-3.5 flex items-start justify-between gap-3">
+    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-[10px] bg-elevated text-lg font-semibold text-muted">
+      {style.shortLabel}
+    </div>
+    <ProtocolBadge
+      slug={protocolSlug}
+      class="px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+    />
+  </div>
+
+  <div class="mb-1 text-[15px] leading-tight font-semibold">{name}</div>
+  <div class="mb-3.5 text-[13px] text-muted">
+    {manufacturerName} · {model ?? "Model TBD"}
+  </div>
+
+  <div class="mt-auto flex flex-wrap gap-1.5">
+    <CompatibilityBadge status={compatibilityStatus} fallbackLabel="Reported" class="px-2 py-0.5 text-[11px] font-medium" />
+    <span class="rounded-md border border-badge bg-badge px-2 py-0.5 text-[11px] font-medium text-secondary">
+      {hubCount} hub{hubCount === 1 ? "" : "s"}
+    </span>
+    {
+      requiresHub === false && (
+        <span class="rounded-md border border-green bg-green-subtle px-2 py-0.5 text-[11px] font-medium text-green">
+          No hub required
+        </span>
+      )
+    }
+    {
+      localControl === true && (
+        <span class="rounded-md border border-green bg-green-subtle px-2 py-0.5 text-[11px] font-medium text-green">
+          Local control
+        </span>
+      )
+    }
+  </div>
+
+  <div class="mt-3 border-t border-theme pt-3 text-[11px] text-muted">
+    Updated {updatedLabel}
+  </div>
+</a>

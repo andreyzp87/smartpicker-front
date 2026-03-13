@@ -1,0 +1,23 @@
+---
+import ButtonLink from "../ui/ButtonLink.astro";
+
+interface Props {
+  href: string;
+  name: string;
+  deviceCount: string;
+  initials: string;
+}
+
+const { href, name, deviceCount, initials } = Astro.props;
+---
+
+<article class="card-hover rounded-2xl border border-theme bg-surface p-5">
+  <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-[10px] bg-elevated text-sm font-semibold text-secondary">
+    {initials}
+  </div>
+  <div class="text-base font-semibold">{name}</div>
+  <div class="mt-1 font-mono text-[13px] text-muted">{deviceCount} devices</div>
+  <ButtonLink href={href} variant="link" class="mt-4">
+    View manufacturer →
+  </ButtonLink>
+</article>

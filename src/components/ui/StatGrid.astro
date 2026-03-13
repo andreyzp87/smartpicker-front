@@ -1,0 +1,39 @@
+---
+interface StatItem {
+  value: string;
+  label: string;
+  muted?: boolean;
+}
+
+interface Props {
+  items: StatItem[];
+  columnsClass?: string;
+  align?: "left" | "center";
+}
+
+const {
+  items,
+  columnsClass = "grid-cols-4 max-md:grid-cols-2",
+  align = "left",
+} = Astro.props;
+---
+
+<div class:list={["grid gap-3", columnsClass]}>
+  {
+    items.map((item) => (
+      <div class:list={["rounded-2xl border border-theme bg-surface p-5", align === "center" && "text-center"]}>
+        <div
+          class:list={[
+            "text-[28px] font-bold font-mono tracking-tight",
+            item.muted ? "text-muted" : "text-gradient",
+          ]}
+        >
+          {item.value}
+        </div>
+        <div class="text-xs font-medium tracking-wider uppercase text-muted">
+          {item.label}
+        </div>
+      </div>
+    ))
+  }
+</div>

@@ -1,0 +1,52 @@
+---
+import ButtonLink from "./ButtonLink.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  eyebrow?: string;
+  class?: string;
+  actionHref?: string;
+  actionLabel?: string;
+  actionClass?: string;
+}
+
+const {
+  title,
+  description,
+  eyebrow,
+  class: className,
+  actionHref,
+  actionLabel,
+  actionClass,
+} = Astro.props;
+---
+
+<div class:list={["mb-4 flex items-baseline justify-between gap-4 max-md:flex-col max-md:items-start", className]}>
+  <div>
+    {
+      eyebrow && (
+        <div class="mb-1 text-[13px] font-semibold tracking-wider uppercase text-muted">
+          {eyebrow}
+        </div>
+      )
+    }
+    <h2 class="text-[22px] font-bold leading-tight tracking-tight">{title}</h2>
+    {
+      description && (
+        <p class="mt-1 text-sm leading-relaxed text-secondary">{description}</p>
+      )
+    }
+  </div>
+  {
+    actionHref && actionLabel && (
+      <ButtonLink
+        href={actionHref}
+        variant="link"
+        class={actionClass}
+      >
+        {actionLabel} →
+      </ButtonLink>
+    )
+  }
+</div>

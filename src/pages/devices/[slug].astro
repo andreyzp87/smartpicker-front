@@ -1,0 +1,514 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import DeviceRelatedLink from "../../components/devices/DeviceRelatedLink.astro";
+import ButtonLink from "../../components/ui/ButtonLink.astro";
+import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
+import CompatibilityBadge from "../../components/ui/CompatibilityBadge.astro";
+import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
+import SidebarPanel from "../../components/ui/SidebarPanel.astro";
+import { readExportJson } from "../../lib/exports";
+import {
+  formatBooleanFact,
+  formatProtocolLabel,
+  getProtocolStyle,
+} from "../../lib/ui";
+
+interface EntityRef {
+  id: number;
+  slug: string;
+  name: string;
+}
+
+interface ProductSummary {
+  id: number;
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  model: string | null;
+  category: EntityRef | null;
+  categoryPath: string[];
+  primaryProtocol: string | null;
+  localControl: boolean | null;
+  cloudDependent: boolean | null;
+  requiresHub: boolean | null;
+  matterCertified: boolean | null;
+  imageUrl: string | null;
+  compatibleHubSlugs: string[];
+  compatibilityStatuses: string[];
+  updatedAt: string;
+  searchText: string;
+}
+
+interface ProductDetail extends ProductSummary {
+  description: string | null;
+  zigbeeDetails?: {
+    ieeeManufacturer: string | null;
+    modelId: string | null;
+    endpoints: unknown;
+    exposes: unknown;
+  };
+  zwaveDetails?: {
+    zwaveManufacturerId: string | null;
+    productType: string | null;
+    productIdHex: string | null;
+    frequency: string | null;
+  };
+  compatibility: {
+    hub: EntityRef;
+    integrationName: string | null;
+    status: string;
+  }[];
+}
+
+interface ProductDetailResponse {
+  generated: string;
+  product: ProductDetail;
+}
+
+interface ProductSlugsResponse {
+  slugs: string[];
+}
+
+interface ProductsExport {
+  products: ProductSummary[];
+}
+
+export async function getStaticPaths() {
+  const { slugs } = await readExportJson<ProductSlugsResponse>("products/slugs.json");
+
+  return slugs.map((slug) => ({
+    params: { slug },
+  }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error("Missing product slug.");
+}
+
+const detail = await readExportJson<ProductDetailResponse>(`products/${slug}.json`);
+const allProducts = await readExportJson<ProductsExport>("products.json");
+
+const product = detail.product;
+const relatedProducts = allProducts.products
+  .filter((candidate) => candidate.slug !== product.slug)
+  .sort((left, right) => {
+    const leftScore =
+      Number(left.manufacturer?.slug === product.manufacturer?.slug) * 2 +
+      Number(left.primaryProtocol === product.primaryProtocol);
+    const rightScore =
+      Number(right.manufacturer?.slug === product.manufacturer?.slug) * 2 +
+      Number(right.primaryProtocol === product.primaryProtocol);
+
+    if (leftScore !== rightScore) {
+      return rightScore - leftScore;
+    }
+
+    return left.name.localeCompare(right.name);
+  })
+  .slice(0, 4);
+
+const formatCount = new Intl.NumberFormat("en-US");
+const styles = getProtocolStyle(product.primaryProtocol);
+const description =
+  product.description && product.description !== product.name
+    ? product.description
+    : `${product.name} is included in the SmartPicker export snapshot with compatibility data for ${product.compatibility.length} hub${product.compatibility.length === 1 ? "" : "s"}.`;
+
+const technicalDetails: { label: string; value: string }[] = [];
+
+if (product.zigbeeDetails) {
+  technicalDetails.push(
+    {
+      label: "IEEE Manufacturer",
+      value: product.zigbeeDetails.ieeeManufacturer ?? "Unknown",
+    },
+    {
+      label: "Model ID",
+      value: product.zigbeeDetails.modelId ?? "Unknown",
+    },
+    {
+      label: "Endpoints",
+      value:
+        product.zigbeeDetails.endpoints == null
+          ? "Not exported"
+          : JSON.stringify(product.zigbeeDetails.endpoints),
+    },
+  );
+}
+
+if (product.zwaveDetails) {
+  technicalDetails.push(
+    {
+      label: "Z-Wave Manufacturer ID",
+      value: product.zwaveDetails.zwaveManufacturerId ?? "Unknown",
+    },
+    {
+      label: "Product Type",
+      value: product.zwaveDetails.productType ?? "Unknown",
+    },
+    {
+      label: "Product ID",
+      value: product.zwaveDetails.productIdHex ?? "Unknown",
+    },
+    {
+      label: "Frequency",
+      value: product.zwaveDetails.frequency ?? "Unknown",
+    },
+  );
+}
+
+technicalDetails.push(
+  {
+    label: "Model",
+    value: product.model ?? "Unknown",
+  },
+  {
+    label: "Compatible hubs",
+    value: formatCount.format(product.compatibleHubSlugs.length),
+  },
+);
+
+const exportGenerated = new Date(detail.generated).toLocaleString("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
+  dateStyle: "medium",
+});
+---
+
+<BaseLayout
+  title={`${product.name} | SmartPicker`}
+  description={`${product.name}${product.model ? ` (${product.model})` : ""} compatibility details, exported hub support, and protocol metadata.`}
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <Breadcrumbs
+      items={[
+        { href: "/", label: "Home" },
+        { href: "/devices", label: "Devices" },
+        { label: product.name },
+      ]}
+    />
+
+    <section class="grid grid-cols-[300px_1fr] gap-10 py-6 pb-10 animate-fade-in max-lg:grid-cols-[240px_1fr] max-lg:gap-7 max-md:grid-cols-1 max-md:gap-5">
+      <div class="relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-theme bg-surface text-[80px] max-md:mx-auto max-md:max-w-[260px]">
+        <span
+          class={`absolute top-3 left-3 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${styles.badge} ${styles.text}`}
+        >
+          {formatProtocolLabel(product.primaryProtocol)}
+        </span>
+        <span class="text-[72px] font-semibold tracking-[-0.08em] text-muted">
+          {styles.shortLabel}
+        </span>
+      </div>
+
+      <div class="flex flex-col">
+        <h1 class="text-[clamp(34px,4vw,48px)] font-bold leading-[1.05] tracking-[-0.035em]">
+          {product.name}
+        </h1>
+        <div class="mb-5 text-base leading-relaxed text-secondary">
+          by
+          {
+            product.manufacturer ? (
+              <a href={`/manufacturers/${product.manufacturer.slug}`}>
+                {" "}{product.manufacturer.name}
+              </a>
+            ) : (
+              " Unknown manufacturer"
+            )
+          }
+          {" "}· Model <strong>{product.model ?? "Unknown"}</strong>
+          {" "}· Category{" "}
+          {product.category?.name ?? "Uncategorized"}
+        </div>
+
+        <div class="mb-6 grid grid-cols-4 gap-px overflow-hidden rounded-2xl bg-[var(--sp-border)] max-md:grid-cols-2">
+          <div class="flex flex-col gap-1 bg-surface px-[18px] py-4">
+            <span class="text-[11px] font-semibold tracking-wider uppercase text-muted">
+              Protocol
+            </span>
+            <span class="text-sm font-semibold">
+              <ProtocolBadge slug={product.primaryProtocol} />
+            </span>
+          </div>
+          <div class="flex flex-col gap-1 bg-surface px-[18px] py-4">
+            <span class="text-[11px] font-semibold tracking-wider uppercase text-muted">
+              Local Control
+            </span>
+            <span class="text-sm font-semibold">
+              {formatBooleanFact(product.localControl)}
+            </span>
+          </div>
+          <div class="flex flex-col gap-1 bg-surface px-[18px] py-4">
+            <span class="text-[11px] font-semibold tracking-wider uppercase text-muted">
+              Cloud Required
+            </span>
+            <span class="text-sm font-semibold">
+              {formatBooleanFact(product.cloudDependent, "Yes", "No")}
+            </span>
+          </div>
+          <div class="flex flex-col gap-1 bg-surface px-[18px] py-4">
+            <span class="text-[11px] font-semibold tracking-wider uppercase text-muted">
+              Requires Hub
+            </span>
+            <span class="text-sm font-semibold">
+              {formatBooleanFact(product.requiresHub, "Yes", "No")}
+            </span>
+          </div>
+        </div>
+
+        <div class="mb-6 flex flex-wrap gap-2">
+          <CompatibilityBadge
+            status={product.compatibilityStatuses[0] ?? null}
+            fallbackLabel="Reported"
+            class="px-3 py-1 text-[13px] font-medium"
+          />
+          {
+            product.primaryProtocol && (
+              <a href={`/protocols/${product.primaryProtocol}`}>
+                <ProtocolBadge
+                  slug={product.primaryProtocol}
+                  class="rounded-md border border-badge px-3 py-1 text-[13px] font-medium"
+                />
+              </a>
+            )
+          }
+          {
+            product.matterCertified && (
+              <span class="rounded-md border border-green bg-green-subtle px-3 py-1 text-[13px] font-medium text-green">
+                Matter certified
+              </span>
+            )
+          }
+          {
+            product.localControl === true && (
+              <span class="rounded-md border border-green bg-green-subtle px-3 py-1 text-[13px] font-medium text-green">
+                Local control
+              </span>
+            )
+          }
+          {
+            product.cloudDependent === false && (
+              <span class="rounded-md border border-green bg-green-subtle px-3 py-1 text-[13px] font-medium text-green">
+                No cloud required
+              </span>
+            )
+          }
+          {
+            product.requiresHub === false && (
+              <span class="rounded-md border border-green bg-green-subtle px-3 py-1 text-[13px] font-medium text-green">
+                No hub required
+              </span>
+            )
+          }
+        </div>
+
+        <div class="mb-6 max-w-[640px] text-[15px] leading-relaxed text-secondary">
+          {description}
+        </div>
+
+        <div class="flex flex-wrap gap-2.5">
+          <ButtonLink href="/devices" variant="secondary">
+            Back to catalog
+          </ButtonLink>
+          {
+            product.manufacturer && (
+              <ButtonLink
+                href={`/manufacturers/${product.manufacturer.slug}`}
+                variant="secondary"
+              >
+                More from {product.manufacturer.name}
+              </ButtonLink>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-[1fr_340px] items-start gap-6 pb-20 max-lg:grid-cols-1">
+      <div class="flex flex-col gap-6">
+        <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
+          <div class="flex items-center justify-between border-b border-theme px-6 py-5">
+            <h2 class="text-2xl font-semibold tracking-tight">Compatibility</h2>
+            <span class="text-[13px] text-muted">
+              {product.compatibility.length} integration
+              {product.compatibility.length === 1 ? "" : "s"} listed
+            </span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[620px] border-collapse">
+              <thead>
+                <tr>
+                  <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                    Hub / Integration
+                  </th>
+                  <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                    Status
+                  </th>
+                  <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                    Coverage
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  product.compatibility.map((entry) => (
+                    <tr class="row-hover border-b border-theme last:border-b-0">
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-2.5 font-medium">
+                          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elevated text-[13px]">
+                            H
+                          </span>
+                          <div>
+                            <div>
+                              <a href={`/hubs/${entry.hub.slug}`}>{entry.hub.name}</a>
+                            </div>
+                            <div class="text-[12px] font-normal text-muted">
+                              {entry.integrationName ?? product.primaryProtocol ?? "Generic integration"}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <CompatibilityBadge status={entry.status} />
+                      </td>
+                      <td class="px-6 py-4 text-[13px] text-secondary">
+                        {entry.status === "verified"
+                          ? "Confirmed in current export"
+                          : entry.status === "reported"
+                            ? "Community or source report included"
+                            : "Status captured in export"}
+                      </td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
+          <div class="flex items-center justify-between border-b border-theme px-6 py-5">
+            <h2 class="text-2xl font-semibold tracking-tight">Technical Details</h2>
+            <span class="text-[13px] text-muted">
+              {product.primaryProtocol ? formatProtocolLabel(product.primaryProtocol) : "Device"} export
+            </span>
+          </div>
+          <div>
+            {
+              technicalDetails.map((detail) => (
+                <div class="flex items-center justify-between border-b border-theme px-6 py-3 last:border-b-0">
+                  <span class="text-[13px] text-muted">{detail.label}</span>
+                  <span class="text-right font-mono text-[13px] font-medium text-secondary">
+                    {detail.value}
+                  </span>
+                </div>
+              ))
+            }
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
+          <div class="flex items-center justify-between border-b border-theme px-6 py-5">
+            <h2 class="text-2xl font-semibold tracking-tight">Export Notes</h2>
+            <span class="text-[13px] text-muted">Current snapshot only</span>
+          </div>
+          <div class="grid gap-px bg-[var(--sp-border)] max-md:grid-cols-1 md:grid-cols-2">
+            <div class="bg-surface px-5 py-4">
+              <div class="text-sm font-medium">Description coverage</div>
+              <p class="mt-1 text-[13px] leading-relaxed text-muted">
+                This device currently exports a short description only. Richer
+                marketing copy, pricing, and annotated capability notes are not
+                in the dataset yet.
+              </p>
+            </div>
+            <div class="bg-surface px-5 py-4">
+              <div class="text-sm font-medium">Capability coverage</div>
+              <p class="mt-1 text-[13px] leading-relaxed text-muted">
+                `zigbeeDetails.exposes` and endpoint payloads are not populated in
+                the current sample, so this page surfaces protocol metadata and
+                compatibility instead of a fabricated capabilities grid.
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6 max-lg:order-first">
+        <div class="animate-fade-in">
+          <SidebarPanel title="Data Sources">
+            <div class="flex flex-col gap-3 rounded-2xl border border-theme bg-surface p-4">
+              <div class="flex items-center gap-3">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--sp-green)]"></span>
+                <span class="flex-1 font-medium">Product detail export</span>
+                <span class="rounded-full bg-green-subtle px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-green">
+                  Primary
+                </span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--sp-blue-500)]"></span>
+                <span class="flex-1 font-medium">Catalog index join</span>
+                <span class="text-xs text-muted">Related devices</span>
+              </div>
+              <div class="text-[13px] leading-relaxed text-muted">
+                The page is built from `products/{slug}.json` plus `products.json`
+                for related-device context.
+              </div>
+            </div>
+          </SidebarPanel>
+        </div>
+
+        <div class="animate-fade-in">
+          <SidebarPanel title="Similar Devices" compact>
+          <div>
+            {
+              relatedProducts.length > 0 ? (
+                relatedProducts.map((candidate) => (
+                  <DeviceRelatedLink
+                    href={`/devices/${candidate.slug}`}
+                    name={candidate.name}
+                    manufacturerName={candidate.manufacturer?.name ?? "Unknown manufacturer"}
+                    model={candidate.model}
+                    protocolSlug={candidate.primaryProtocol}
+                  />
+                ))
+              ) : (
+                <div class="px-5 py-4 text-[13px] text-muted">
+                  No related products are available in the current export.
+                </div>
+              )
+            }
+          </div>
+          </SidebarPanel>
+        </div>
+
+        <SidebarPanel title="Snapshot">
+          <div class="flex flex-col gap-2 text-[13px] text-muted">
+          <div class="flex justify-between gap-4">
+            <span>Last updated</span>
+            <span class="font-medium text-secondary">{updatedLabel}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span>Export generated</span>
+            <span class="font-medium text-secondary">{exportGenerated}</span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span>Compatibility rows</span>
+            <span class="font-medium text-secondary">
+              {formatCount.format(product.compatibility.length)}
+            </span>
+          </div>
+          <div class="flex justify-between gap-4">
+            <span>Protocol</span>
+            <span class="font-medium text-secondary">
+              {formatProtocolLabel(product.primaryProtocol)}
+            </span>
+          </div>
+          </div>
+        </SidebarPanel>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

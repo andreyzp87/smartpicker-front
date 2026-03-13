@@ -1,0 +1,23 @@
+---
+import { formatProtocolLabel, getProtocolStyle, joinClasses } from "../../lib/ui";
+
+interface Props {
+  slug: string | null;
+  label?: string;
+  class?: string;
+}
+
+const { slug, label, class: className } = Astro.props;
+const style = getProtocolStyle(slug);
+---
+
+<span
+  class={joinClasses(
+    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+    style.badge,
+    style.text,
+    className,
+  )}
+>
+  {label ?? formatProtocolLabel(slug)}
+</span>

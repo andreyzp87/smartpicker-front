@@ -1,0 +1,37 @@
+---
+interface Props {
+  href: string;
+  name: string;
+  deviceCount: string;
+  description: string;
+  directCount: string;
+  nestedCount: string;
+}
+
+const { href, name, deviceCount, description, directCount, nestedCount } =
+  Astro.props;
+---
+
+<a
+  href={href}
+  class="flex flex-col gap-4 rounded-2xl border border-theme bg-surface p-5 text-primary shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+>
+  <div class="flex items-center gap-4">
+    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-elevated text-base font-bold tracking-[-0.05em] text-secondary">
+      #
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="text-lg font-bold tracking-tight">{name}</div>
+      <div class="font-mono text-[13px] text-muted">{deviceCount} devices</div>
+    </div>
+  </div>
+  <p class="text-sm leading-relaxed text-secondary">{description}</p>
+  <div class="mt-auto flex flex-wrap gap-2">
+    <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
+      Direct: {directCount}
+    </span>
+    <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
+      Nested: {nestedCount}
+    </span>
+  </div>
+</a>

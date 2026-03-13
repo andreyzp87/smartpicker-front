@@ -1,0 +1,556 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ManufacturerProtocolCard from "../../components/manufacturers/ManufacturerProtocolCard.astro";
+import ButtonLink from "../../components/ui/ButtonLink.astro";
+import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
+import InfoRowLink from "../../components/ui/InfoRowLink.astro";
+import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import SidebarPanel from "../../components/ui/SidebarPanel.astro";
+import StatGrid from "../../components/ui/StatGrid.astro";
+import { readExportJson } from "../../lib/exports";
+import { formatProtocolLabel, getProtocolStyle, sentenceCase } from "../../lib/ui";
+
+interface EntityRef {
+  id: number;
+  slug: string;
+  name: string;
+}
+
+interface ManufacturerDetail {
+  id: number;
+  slug: string;
+  name: string;
+  website: string | null;
+  logoUrl: string | null;
+  deviceCount: number;
+  updatedAt: string | null;
+  deviceSlugs: string[];
+}
+
+interface ManufacturerDetailResponse {
+  generated: string;
+  manufacturer: ManufacturerDetail;
+}
+
+interface ManufacturerSlugsResponse {
+  slugs: string[];
+}
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  model: string | null;
+  category: EntityRef | null;
+  primaryProtocol: string | null;
+  compatibleHubSlugs: string[];
+  compatibilityStatuses: string[];
+  updatedAt: string;
+}
+
+interface ProductsExport {
+  products: ProductSummary[];
+}
+
+interface HubSummary {
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+}
+
+interface HubsExport {
+  hubs: HubSummary[];
+}
+
+interface ManufacturersExport {
+  manufacturers: ManufacturerDetail[];
+}
+
+export async function getStaticPaths() {
+  const { slugs } = await readExportJson<ManufacturerSlugsResponse>(
+    "manufacturers/slugs.json",
+  );
+
+  return slugs.map((slug) => ({
+    params: { slug },
+  }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error("Missing manufacturer slug.");
+}
+
+const detail = await readExportJson<ManufacturerDetailResponse>(
+  `manufacturers/${slug}.json`,
+);
+const products = await readExportJson<ProductsExport>("products.json");
+const hubs = await readExportJson<HubsExport>("hubs.json");
+const manufacturers = await readExportJson<ManufacturersExport>(
+  "manufacturers.json",
+);
+
+const manufacturer = detail.manufacturer;
+const mappedProducts = products.products
+  .filter((product) => manufacturer.deviceSlugs.includes(product.slug))
+  .sort((left, right) => {
+    const leftScore =
+      left.compatibleHubSlugs.length * 10 + left.compatibilityStatuses.length;
+    const rightScore =
+      right.compatibleHubSlugs.length * 10 + right.compatibilityStatuses.length;
+
+    if (leftScore !== rightScore) {
+      return rightScore - leftScore;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+const protocolCounts = mappedProducts.reduce<Record<string, number>>((counts, product) => {
+  if (product.primaryProtocol) {
+    counts[product.primaryProtocol] = (counts[product.primaryProtocol] ?? 0) + 1;
+  }
+
+  return counts;
+}, {});
+
+const categoryCounts = mappedProducts.reduce<Record<string, number>>((counts, product) => {
+  const key = product.category?.name ?? "Uncategorized";
+  counts[key] = (counts[key] ?? 0) + 1;
+  return counts;
+}, {});
+
+const hubCounts = mappedProducts.reduce<Record<string, number>>((counts, product) => {
+  for (const hubSlug of product.compatibleHubSlugs) {
+    counts[hubSlug] = (counts[hubSlug] ?? 0) + 1;
+  }
+
+  return counts;
+}, {});
+
+const hubLookup = new Map(hubs.hubs.map((hub) => [hub.slug, hub]));
+const compatibleHubs = Object.entries(hubCounts)
+  .map(([hubSlug, count]) => ({
+    hub: hubLookup.get(hubSlug),
+    count,
+  }))
+  .filter((entry): entry is { hub: HubSummary; count: number } => Boolean(entry.hub))
+  .sort((left, right) => right.count - left.count);
+
+const relatedManufacturers = manufacturers.manufacturers
+  .filter((candidate) => candidate.slug !== manufacturer.slug)
+  .map((candidate) => {
+    const candidateProducts = products.products.filter((product) =>
+      product.manufacturer?.slug === candidate.slug,
+    );
+    const candidateProtocols = new Set(
+      candidateProducts
+        .map((product) => product.primaryProtocol)
+        .filter((protocol): protocol is string => Boolean(protocol)),
+    );
+    const sharedProtocols = [...candidateProtocols].filter((protocol) =>
+      protocolCounts[protocol] != null,
+    );
+
+    return {
+      ...candidate,
+      sharedProtocols,
+    };
+  })
+  .sort((left, right) => {
+    if (left.sharedProtocols.length !== right.sharedProtocols.length) {
+      return right.sharedProtocols.length - left.sharedProtocols.length;
+    }
+
+    return right.deviceCount - left.deviceCount;
+  })
+  .slice(0, 4);
+
+const protocolBreakdown = Object.entries(protocolCounts)
+  .sort((left, right) => right[1] - left[1]);
+const categoryBreakdown = Object.entries(categoryCounts)
+  .sort((left, right) => right[1] - left[1]);
+
+const formatCount = new Intl.NumberFormat("en-US");
+
+const initials = manufacturer.name
+  .split(/[\s-]+/)
+  .map((part) => part[0])
+  .join("")
+  .slice(0, 2)
+  .toUpperCase();
+const updatedLabel = manufacturer.updatedAt
+  ? new Date(manufacturer.updatedAt).toLocaleDateString("en-US", {
+      dateStyle: "medium",
+    })
+  : "Unknown";
+const exportGenerated = new Date(detail.generated).toLocaleString("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const summaryText =
+  protocolBreakdown.length > 0
+    ? `${manufacturer.name} currently contributes ${manufacturer.deviceCount} published devices across ${protocolBreakdown.length} protocol ${protocolBreakdown.length === 1 ? "family" : "families"} in the SmartPicker export snapshot.`
+    : `${manufacturer.name} is included in the SmartPicker export snapshot with ${manufacturer.deviceCount} published devices.`;
+---
+
+<BaseLayout
+  title={`${manufacturer.name} | SmartPicker`}
+  description={`${manufacturer.name} device coverage, protocol breakdown, and mapped hub compatibility from SmartPicker exports.`}
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <Breadcrumbs
+      items={[
+        { href: "/", label: "Home" },
+        { href: "/manufacturers", label: "Manufacturers" },
+        { label: manufacturer.name },
+      ]}
+    />
+
+    <section class="animate-fade-in py-8 pb-6">
+      <div class="flex items-center gap-6 max-md:flex-col max-md:items-start">
+        <div class="flex h-20 w-20 items-center justify-center rounded-[28px] bg-elevated text-2xl font-bold text-secondary">
+          {initials}
+        </div>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[clamp(34px,4vw,48px)] font-bold leading-[1.05] tracking-[-0.035em]">
+            {manufacturer.name}
+          </h1>
+          <p class="mt-3 max-w-[860px] text-base leading-relaxed text-secondary">
+            {summaryText} {
+              manufacturer.website
+                ? `Official website: ${manufacturer.website.replace(/^https?:\/\//, "")}.`
+                : "Website metadata is not included in the current export."
+            }
+          </p>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            {
+              protocolBreakdown.map(([protocol]) => (
+                <ProtocolBadge slug={protocol} />
+              ))
+            }
+            {
+              protocolBreakdown.length === 0 && (
+                <span class="rounded-md border border-theme bg-badge px-3 py-1 text-[13px] font-medium text-secondary">
+                  No protocol mapping yet
+                </span>
+              )
+            }
+          </div>
+
+          <div class="mt-5">
+            <div class="h-2 overflow-hidden rounded-full bg-[var(--sp-bar-track)]">
+              {
+                protocolBreakdown.map(([protocol, count]) => {
+                  const style = getProtocolStyle(protocol);
+                  return (
+                    <div
+                      class:list={["inline-block h-full", style.badge]}
+                      style={`width:${(count / Math.max(manufacturer.deviceCount, 1)) * 100}%`}
+                    >
+                    </div>
+                  );
+                })
+              }
+            </div>
+            <div class="mt-3 flex flex-wrap gap-3">
+              {
+                protocolBreakdown.map(([protocol, count]) => {
+                  const style = getProtocolStyle(protocol);
+
+                  return (
+                    <span class="inline-flex items-center gap-2 text-sm text-secondary">
+                      <span
+                        class:list={["inline-flex h-2.5 w-2.5 rounded-full", style.badge]}
+                      >
+                      </span>
+                      {formatProtocolLabel(protocol)}
+                      <span class="font-mono text-xs text-muted">{count}</span>
+                    </span>
+                  );
+                })
+              }
+            </div>
+          </div>
+
+          <div class="mt-6 max-w-[760px]">
+            <StatGrid
+              columnsClass="grid-cols-3 max-md:grid-cols-1"
+              items={[
+                { value: formatCount.format(manufacturer.deviceCount), label: "Total devices" },
+                {
+                  value: formatCount.format(mappedProducts.filter((product) => product.compatibilityStatuses.includes("verified")).length),
+                  label: "Verified",
+                },
+                { value: formatCount.format(categoryBreakdown.length), label: "Categories" },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="flex flex-col gap-6">
+        <section>
+          <SectionHeader eyebrow="Protocol breakdown" title="Coverage by protocol" />
+          <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+            {
+              protocolBreakdown.map(([protocol, count], index) => (
+                <div style={`animation-delay:${0.05 + index * 0.05}s`}>
+                  <ManufacturerProtocolCard
+                    protocol={protocol}
+                    count={formatCount.format(count)}
+                    devices={formatCount.format(
+                      mappedProducts.filter(
+                        (product) => product.primaryProtocol === protocol,
+                      ).length,
+                    )}
+                    reported={formatCount.format(
+                      mappedProducts.filter(
+                        (product) =>
+                          product.primaryProtocol === protocol &&
+                          product.compatibilityStatuses.includes("reported"),
+                      ).length,
+                    )}
+                    percentage={(count / Math.max(manufacturer.deviceCount, 1)) * 100}
+                  />
+                </div>
+              ))
+            }
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
+          <div class="flex items-center justify-between border-b border-theme px-6 py-5">
+            <h2 class="text-2xl font-semibold tracking-tight">Device Categories</h2>
+            <span class="text-[13px] text-muted">
+              {formatCount.format(manufacturer.deviceCount)} total
+            </span>
+          </div>
+          <table class="w-full border-collapse">
+            <thead>
+              <tr>
+                <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                  Category
+                </th>
+                <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                </th>
+                <th class="border-b border-theme bg-elevated px-6 py-2.5 text-right text-[11px] font-semibold tracking-wider uppercase text-muted">
+                  Devices
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                categoryBreakdown.map(([category, count]) => (
+                  <tr class="border-b border-theme last:border-b-0">
+                    <td class="px-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-elevated text-base shrink-0">
+                          {category === "Uncategorized" ? "?" : "■"}
+                        </div>
+                        <span class="text-sm font-medium">{category}</span>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4">
+                      <div class="h-2 overflow-hidden rounded-sm bg-bar-track">
+                        <div
+                          class="h-full rounded-sm bg-blue-gradient"
+                          style={`width:${(count / Math.max(manufacturer.deviceCount, 1)) * 100}%`}
+                        >
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono text-sm text-secondary">
+                      {formatCount.format(count)}
+                    </td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <div class="mb-4 text-[13px] font-semibold tracking-wider uppercase text-muted">
+            Popular Devices
+          </div>
+          <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+            {
+              mappedProducts.slice(0, 6).map((product, index) => {
+                const style = product.primaryProtocol
+                  ? getProtocolStyle(product.primaryProtocol)
+                  : { badge: "bg-badge", text: "text-secondary" };
+
+                return (
+                  <a
+                    href={`/devices/${product.slug}`}
+                    class="card-hover flex flex-col rounded-2xl border border-theme bg-surface p-5 text-primary"
+                    style={`animation-delay:${0.25 + index * 0.05}s`}
+                  >
+                    <div class="mb-3.5 flex items-start justify-between">
+                      <div class="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[10px] bg-elevated text-sm font-semibold text-muted">
+                        {product.model?.slice(0, 2).toUpperCase() ?? "SP"}
+                      </div>
+                      <span
+                        class={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${style.badge} ${style.text}`}
+                      >
+                        {formatProtocolLabel(product.primaryProtocol)}
+                      </span>
+                    </div>
+                    <div class="mb-0.5 text-[15px] leading-tight font-semibold">
+                      {product.name}
+                    </div>
+                    <div class="mb-3 text-[13px] text-muted">
+                      {product.model ?? "Model TBD"}
+                    </div>
+                    <div class="mt-2.5 flex items-center gap-1 border-t border-theme pt-2.5">
+                      <span class="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-green-subtle text-[9px] font-bold text-green">
+                        {product.compatibleHubSlugs.length}
+                      </span>
+                      <span class="ml-auto text-[11px] text-muted">
+                        {product.compatibleHubSlugs.length} hub
+                        {product.compatibleHubSlugs.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                  </a>
+                );
+              })
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6 max-lg:order-first">
+        <div class="animate-fade-in" style="animation-delay:0.1s">
+          <SidebarPanel title="Company Info">
+            <div class="flex flex-col gap-3 text-sm">
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Slug</span>
+                <span class="font-medium font-mono text-secondary">
+                  {manufacturer.slug}
+                </span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Website</span>
+                <span class="font-medium text-secondary">
+                  {manufacturer.website
+                    ? manufacturer.website.replace(/^https?:\/\//, "")
+                    : "Not listed"}
+                </span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Devices tracked</span>
+                <span class="font-medium font-mono text-secondary">
+                  {formatCount.format(manufacturer.deviceCount)}
+                </span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Protocols</span>
+                <span class="font-medium text-secondary">
+                  {formatCount.format(protocolBreakdown.length)}
+                </span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Last updated</span>
+                <span class="font-medium text-secondary">{updatedLabel}</span>
+              </div>
+            </div>
+          </SidebarPanel>
+        </div>
+
+        <div class="animate-fade-in" style="animation-delay:0.15s">
+          <SidebarPanel title="Official Links">
+            {
+              manufacturer.website ? (
+                <a
+                  href={manufacturer.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  class="flex items-center gap-3 rounded-2xl border border-theme bg-elevated px-4 py-3 text-primary transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+                >
+                  <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-surface text-sm">
+                    🌐
+                  </span>
+                  {manufacturer.website.replace(/^https?:\/\//, "")}
+                </a>
+              ) : (
+                <p class="text-[13px] leading-relaxed text-muted">
+                  No official website is attached to this manufacturer in the
+                  current export.
+                </p>
+              )
+            }
+          </SidebarPanel>
+        </div>
+
+        <div class="animate-fade-in" style="animation-delay:0.2s">
+          <SidebarPanel title="Compatible Hubs" compact>
+            <div class="flex flex-col gap-3">
+            {
+              compatibleHubs.length > 0 ? (
+                compatibleHubs.map((entry) => (
+                  <InfoRowLink
+                    href={`/hubs/${entry.hub.slug}`}
+                    icon="H"
+                    title={entry.hub.name}
+                    meta={entry.hub.manufacturer?.name ?? "Independent"}
+                    count={formatCount.format(entry.count)}
+                  />
+                ))
+              ) : (
+                <div class="text-[13px] text-muted">
+                  No hub relationships are exported for this manufacturer yet.
+                </div>
+              )
+            }
+            </div>
+          </SidebarPanel>
+        </div>
+
+        <div class="animate-fade-in" style="animation-delay:0.25s">
+          <SidebarPanel title="Similar Manufacturers" compact>
+            <div class="flex flex-col gap-3">
+            {
+              relatedManufacturers.length > 0 ? (
+                relatedManufacturers.map((candidate) => (
+                  <InfoRowLink
+                    href={`/manufacturers/${candidate.slug}`}
+                    icon={candidate.name
+                      .split(/[\s-]+/)
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    title={candidate.name}
+                    meta={candidate.sharedProtocols.length > 0
+                      ? candidate.sharedProtocols.map((protocol) => formatProtocolLabel(protocol)).join(", ")
+                      : "No shared protocols in snapshot"}
+                    count={formatCount.format(candidate.deviceCount)}
+                  />
+                ))
+              ) : (
+                <div class="text-[13px] text-muted">
+                  No related manufacturers are available in the current export.
+                </div>
+              )
+            }
+            </div>
+          </SidebarPanel>
+        </div>
+
+        <ButtonLink
+          href={`/devices?manufacturer=${encodeURIComponent(manufacturer.slug)}`}
+          variant="secondary"
+          class="justify-center"
+        >
+          Browse all {formatCount.format(manufacturer.deviceCount)} devices →
+        </ButtonLink>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

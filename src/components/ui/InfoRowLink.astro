@@ -1,0 +1,25 @@
+---
+interface Props {
+  href: string;
+  icon: string;
+  title: string;
+  meta: string;
+  count?: string;
+}
+
+const { href, icon, title, meta, count } = Astro.props;
+---
+
+<a
+  href={href}
+  class="flex items-center gap-3 rounded-2xl border border-theme bg-elevated px-4 py-3 text-primary transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+>
+  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface text-sm font-semibold text-secondary">
+    {icon}
+  </div>
+  <div class="min-w-0 flex-1">
+    <div class="text-sm font-semibold">{title}</div>
+    <div class="text-xs text-muted">{meta}</div>
+  </div>
+  {count && <span class="font-mono text-sm font-semibold text-primary">{count}</span>}
+</a>

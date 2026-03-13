@@ -1,0 +1,41 @@
+---
+import { formatProtocolLabel } from "../../lib/ui";
+
+interface Props {
+  href: string;
+  name: string;
+  protocolSlugs: string[];
+  description?: string | null;
+  deviceCount: string;
+}
+
+const { href, name, protocolSlugs, description, deviceCount } = Astro.props;
+---
+
+<a
+  href={href}
+  class="card-hover flex items-center gap-4 rounded-2xl border border-theme bg-surface p-6 text-primary max-sm:flex-col max-sm:items-start"
+>
+  <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-elevated text-sm font-semibold text-secondary">
+    HUB
+  </div>
+  <div class="min-w-0 flex-1">
+    <div class="mb-0.5 text-base font-semibold">{name}</div>
+    <div class="text-[13px] text-muted">
+      {protocolSlugs.slice(0, 3).map((protocol) => formatProtocolLabel(protocol)).join(", ")}
+    </div>
+    {
+      description && (
+        <p class="mt-2 text-[13px] leading-relaxed text-secondary">
+          {description}
+        </p>
+      )
+    }
+  </div>
+  <div class="text-right font-mono text-sm font-medium whitespace-nowrap text-secondary max-sm:text-left">
+    {deviceCount}
+    <span class="block text-[11px] font-normal font-[var(--font-sans)] text-muted">
+      devices
+    </span>
+  </div>
+</a>

@@ -1,60 +1,391 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
-:root {
-  --background: oklch(0.98 0.01 95);
-  --foreground: oklch(0.2 0.02 255);
-  --surface: oklch(1 0 0 / 0.72);
-  --surface-strong: oklch(0.99 0.01 95 / 0.92);
-  --border: oklch(0.88 0.02 90);
-  --muted: oklch(0.55 0.02 240);
-  --brand: oklch(0.62 0.15 196);
-  --brand-strong: oklch(0.45 0.12 220);
-  --accent: oklch(0.72 0.16 132);
-  --shadow: 0 24px 80px oklch(0.27 0.04 240 / 0.18);
+/* ── Tailwind v4 Theme Extension ── */
+@theme {
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 100px;
 }
 
-@theme inline {
-  --font-sans: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-strong: var(--surface-strong);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-brand: var(--brand);
-  --color-brand-strong: var(--brand-strong);
-  --color-accent: var(--accent);
+/* ── Light Theme (default) ── */
+:root,
+:root[data-theme="light"] {
+  --sp-bg-body: #f8f9fc;
+  --sp-bg-surface: #ffffff;
+  --sp-bg-elevated: #f1f3f8;
+  --sp-bg-input: #ffffff;
+  --sp-bg-hover: rgba(0, 0, 0, 0.03);
+  --sp-bg-inset: #f3f4f8;
+
+  --sp-text-primary: #111827;
+  --sp-text-secondary: #4b5563;
+  --sp-text-muted: #9ca3af;
+  --sp-text-inverted: #ffffff;
+
+  --sp-blue-600: #2563eb;
+  --sp-blue-500: #3b82f6;
+  --sp-blue-400: #2563eb;
+  --sp-blue-bg: rgba(37, 99, 235, 0.06);
+  --sp-blue-border: rgba(37, 99, 235, 0.18);
+  --sp-blue-shadow: rgba(37, 99, 235, 0.2);
+  --sp-blue-glow: rgba(37, 99, 235, 0.05);
+
+  --sp-zigbee: #d97706;
+  --sp-zigbee-bg: rgba(217, 119, 6, 0.08);
+  --sp-zigbee-bar: #f59e0b;
+
+  --sp-zwave: #7c3aed;
+  --sp-zwave-bg: rgba(124, 58, 237, 0.08);
+  --sp-zwave-bar: #8b5cf6;
+
+  --sp-matter: #0891b2;
+  --sp-matter-bg: rgba(8, 145, 178, 0.07);
+  --sp-matter-bar: #06b6d4;
+
+  --sp-wifi: #059669;
+  --sp-wifi-bg: rgba(5, 150, 105, 0.07);
+  --sp-wifi-bar: #10b981;
+
+  --sp-thread: #e11d48;
+  --sp-thread-bg: rgba(225, 29, 72, 0.07);
+  --sp-thread-bar: #f43f5e;
+
+  --sp-bluetooth: #2563eb;
+  --sp-bluetooth-bg: rgba(37, 99, 235, 0.07);
+  --sp-bluetooth-bar: #3b82f6;
+
+  --sp-green: #16a34a;
+  --sp-green-bg: rgba(22, 163, 74, 0.07);
+  --sp-green-border: rgba(22, 163, 74, 0.18);
+
+  --sp-red: #dc2626;
+  --sp-red-bg: rgba(220, 38, 38, 0.06);
+  --sp-red-border: rgba(220, 38, 38, 0.14);
+
+  --sp-amber: #d97706;
+  --sp-amber-bg: rgba(217, 119, 6, 0.06);
+  --sp-amber-border: rgba(217, 119, 6, 0.18);
+
+  --sp-purple: #7c3aed;
+  --sp-purple-bg: rgba(124, 58, 237, 0.06);
+  --sp-purple-border: rgba(124, 58, 237, 0.18);
+
+  --sp-cyan: #0891b2;
+  --sp-cyan-bg: rgba(8, 145, 178, 0.06);
+  --sp-cyan-border: rgba(8, 145, 178, 0.18);
+
+  --sp-border: rgba(0, 0, 0, 0.07);
+  --sp-border-hover: rgba(0, 0, 0, 0.13);
+  --sp-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sp-shadow-search: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --sp-header-bg: rgba(248, 249, 252, 0.85);
+  --sp-badge-bg: rgba(0, 0, 0, 0.03);
+  --sp-badge-border: rgba(0, 0, 0, 0.07);
+  --sp-noise-opacity: 0.015;
+  --sp-bar-track: rgba(0, 0, 0, 0.06);
+  --sp-table-row-alt: rgba(0, 0, 0, 0.015);
+  --sp-table-row-hover: rgba(0, 0, 0, 0.03);
+  --sp-compat-untested-bg: rgba(0, 0, 0, 0.04);
+
+  --sp-gradient-from: #2563eb;
+  --sp-gradient-to: #0891b2;
+  --sp-hero-gradient: linear-gradient(135deg, #eef2ff, #f0f9ff);
+  --sp-cta-bg: linear-gradient(135deg, #eef2ff, #f0f9ff);
+  --sp-timeline-line: rgba(0, 0, 0, 0.08);
+  --sp-timeline-dot-bg: #ffffff;
+  --sp-blockquote-bg: rgba(37, 99, 235, 0.03);
+  --sp-sub-hover: rgba(0, 0, 0, 0.025);
+  --sp-search-btn-text: white;
 }
 
+/* ── Dark Theme ── */
+:root[data-theme="dark"] {
+  --sp-bg-body: #0a0e1a;
+  --sp-bg-surface: #0f1629;
+  --sp-bg-elevated: #161d35;
+  --sp-bg-input: #161d35;
+  --sp-bg-hover: rgba(255, 255, 255, 0.05);
+  --sp-bg-inset: #0b0f1e;
+
+  --sp-text-primary: #f0f2f7;
+  --sp-text-secondary: #8494b8;
+  --sp-text-muted: #5a6e9a;
+  --sp-text-inverted: #0a0e1a;
+
+  --sp-blue-600: #2563eb;
+  --sp-blue-500: #3b82f6;
+  --sp-blue-400: #60a5fa;
+  --sp-blue-bg: rgba(59, 130, 246, 0.08);
+  --sp-blue-border: rgba(59, 130, 246, 0.15);
+  --sp-blue-shadow: rgba(59, 130, 246, 0.3);
+  --sp-blue-glow: rgba(59, 130, 246, 0.08);
+
+  --sp-zigbee: #fbbf24;
+  --sp-zigbee-bg: rgba(245, 158, 11, 0.1);
+  --sp-zigbee-bar: #f59e0b;
+
+  --sp-zwave: #a78bfa;
+  --sp-zwave-bg: rgba(139, 92, 246, 0.1);
+  --sp-zwave-bar: #8b5cf6;
+
+  --sp-matter: #22d3ee;
+  --sp-matter-bg: rgba(6, 182, 212, 0.1);
+  --sp-matter-bar: #06b6d4;
+
+  --sp-wifi: #34d399;
+  --sp-wifi-bg: rgba(16, 185, 129, 0.1);
+  --sp-wifi-bar: #10b981;
+
+  --sp-thread: #fb7185;
+  --sp-thread-bg: rgba(244, 63, 94, 0.1);
+  --sp-thread-bar: #f43f5e;
+
+  --sp-bluetooth: #60a5fa;
+  --sp-bluetooth-bg: rgba(96, 165, 250, 0.1);
+  --sp-bluetooth-bar: #3b82f6;
+
+  --sp-green: #22c55e;
+  --sp-green-bg: rgba(34, 197, 94, 0.08);
+  --sp-green-border: rgba(34, 197, 94, 0.15);
+
+  --sp-red: #ef4444;
+  --sp-red-bg: rgba(239, 68, 68, 0.08);
+  --sp-red-border: rgba(239, 68, 68, 0.15);
+
+  --sp-amber: #f59e0b;
+  --sp-amber-bg: rgba(245, 158, 11, 0.08);
+  --sp-amber-border: rgba(245, 158, 11, 0.15);
+
+  --sp-purple: #a78bfa;
+  --sp-purple-bg: rgba(167, 139, 250, 0.08);
+  --sp-purple-border: rgba(167, 139, 250, 0.15);
+
+  --sp-cyan: #22d3ee;
+  --sp-cyan-bg: rgba(34, 211, 238, 0.08);
+  --sp-cyan-border: rgba(34, 211, 238, 0.15);
+
+  --sp-border: rgba(255, 255, 255, 0.06);
+  --sp-border-hover: rgba(255, 255, 255, 0.12);
+  --sp-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --sp-shadow-search: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 8px 32px rgba(0, 0, 0, 0.3);
+  --sp-header-bg: rgba(10, 14, 26, 0.8);
+  --sp-badge-bg: rgba(255, 255, 255, 0.04);
+  --sp-badge-border: rgba(255, 255, 255, 0.06);
+  --sp-noise-opacity: 0.03;
+  --sp-bar-track: rgba(255, 255, 255, 0.06);
+  --sp-table-row-alt: rgba(255, 255, 255, 0.02);
+  --sp-table-row-hover: rgba(255, 255, 255, 0.04);
+  --sp-compat-untested-bg: rgba(255, 255, 255, 0.04);
+
+  --sp-gradient-from: #60a5fa;
+  --sp-gradient-to: #22d3ee;
+  --sp-hero-gradient: linear-gradient(135deg, #161d35, #0f1629);
+  --sp-cta-bg: linear-gradient(135deg, #161d35, #0f1629);
+  --sp-timeline-line: rgba(255, 255, 255, 0.08);
+  --sp-timeline-dot-bg: #0f1629;
+  --sp-blockquote-bg: rgba(59, 130, 246, 0.04);
+  --sp-sub-hover: rgba(255, 255, 255, 0.04);
+  --sp-search-btn-text: white;
+}
+
+/* ── Base Reset & Global Styles ── */
 @layer base {
-  * {
-    @apply border-border;
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
 
   html {
-    color-scheme: light;
+    font-family: var(--font-sans);
+    background: var(--sp-bg-body);
+    color: var(--sp-text-primary);
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+    transition: background 0.3s, color 0.3s;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    background-image:
-      radial-gradient(circle at top, oklch(1 0 0 / 0.88), transparent 30%),
-      linear-gradient(135deg, oklch(0.96 0.02 105), oklch(0.94 0.03 215));
     min-height: 100vh;
+    overflow-x: hidden;
   }
 
-  ::selection {
-    background: oklch(0.78 0.13 198 / 0.35);
+  /* Noise texture overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: var(--sp-noise-opacity);
+    pointer-events: none;
+    z-index: 9999;
   }
 
   a {
-    @apply transition-colors;
+    color: var(--sp-blue-400);
+    text-decoration: none;
   }
+}
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Utility Classes (custom, not expressible in pure Tailwind) ── */
+@layer utilities {
+  /* Background utilities */
+  .bg-body { background: var(--sp-bg-body); }
+  .bg-surface { background: var(--sp-bg-surface); }
+  .bg-elevated { background: var(--sp-bg-elevated); }
+  .bg-input { background: var(--sp-bg-input); }
+  .bg-hover { background: var(--sp-bg-hover); }
+  .bg-inset { background: var(--sp-bg-inset); }
+  .bg-header { background: var(--sp-header-bg); }
+  .bg-badge { background: var(--sp-badge-bg); }
+  .bg-blue-subtle { background: var(--sp-blue-bg); }
+  .bg-blue-gradient { background: linear-gradient(135deg, var(--sp-blue-500), var(--sp-blue-600)); }
+  .bg-hero-gradient { background: var(--sp-hero-gradient); }
+  .bg-cta-gradient { background: var(--sp-cta-bg); }
+  .bg-bar-track { background: var(--sp-bar-track); }
+  .bg-table-alt { background: var(--sp-table-row-alt); }
+  .bg-blockquote { background: var(--sp-blockquote-bg); }
+
+  /* Protocol backgrounds */
+  .bg-zigbee { background: var(--sp-zigbee-bg); }
+  .bg-zwave { background: var(--sp-zwave-bg); }
+  .bg-matter { background: var(--sp-matter-bg); }
+  .bg-wifi { background: var(--sp-wifi-bg); }
+  .bg-thread { background: var(--sp-thread-bg); }
+  .bg-bluetooth { background: var(--sp-bluetooth-bg); }
+
+  /* Protocol bar fills */
+  .bg-zigbee-bar { background: var(--sp-zigbee-bar); }
+  .bg-zwave-bar { background: var(--sp-zwave-bar); }
+  .bg-matter-bar { background: var(--sp-matter-bar); }
+  .bg-wifi-bar { background: var(--sp-wifi-bar); }
+  .bg-thread-bar { background: var(--sp-thread-bar); }
+  .bg-bluetooth-bar { background: var(--sp-bluetooth-bar); }
+
+  /* Status backgrounds */
+  .bg-green-subtle { background: var(--sp-green-bg); }
+  .bg-red-subtle { background: var(--sp-red-bg); }
+  .bg-amber-subtle { background: var(--sp-amber-bg); }
+  .bg-purple-subtle { background: var(--sp-purple-bg); }
+  .bg-cyan-subtle { background: var(--sp-cyan-bg); }
+  .bg-untested { background: var(--sp-compat-untested-bg); }
+
+  /* Text color utilities */
+  .text-primary { color: var(--sp-text-primary); }
+  .text-secondary { color: var(--sp-text-secondary); }
+  .text-muted { color: var(--sp-text-muted); }
+  .text-inverted { color: var(--sp-text-inverted); }
+  .text-blue { color: var(--sp-blue-400); }
+  .text-blue-600 { color: var(--sp-blue-600); }
+  .text-foreground { color: var(--sp-text-primary); }
+  .text-brand-strong { color: var(--sp-blue-600); }
+
+  /* Protocol text colors */
+  .text-zigbee { color: var(--sp-zigbee); }
+  .text-zwave { color: var(--sp-zwave); }
+  .text-matter { color: var(--sp-matter); }
+  .text-wifi { color: var(--sp-wifi); }
+  .text-thread { color: var(--sp-thread); }
+  .text-bluetooth { color: var(--sp-bluetooth); }
+
+  /* Status text colors */
+  .text-green { color: var(--sp-green); }
+  .text-red { color: var(--sp-red); }
+  .text-amber { color: var(--sp-amber); }
+  .text-purple { color: var(--sp-purple); }
+  .text-cyan { color: var(--sp-cyan); }
+
+  /* Border utilities */
+  .border-theme { border-color: var(--sp-border); }
+  .border-theme-hover { border-color: var(--sp-border-hover); }
+  .border-blue { border-color: var(--sp-blue-border); }
+  .border-badge { border-color: var(--sp-badge-border); }
+  .border-border { border-color: var(--sp-border); }
+  .border-green { border-color: var(--sp-green-border); }
+  .border-red { border-color: var(--sp-red-border); }
+  .border-amber { border-color: var(--sp-amber-border); }
+  .border-purple { border-color: var(--sp-purple-border); }
+  .border-cyan { border-color: var(--sp-cyan-border); }
+  .border-zigbee { border-color: var(--sp-zigbee); }
+  .border-zwave { border-color: var(--sp-zwave); }
+  .border-matter { border-color: var(--sp-matter); }
+  .border-wifi { border-color: var(--sp-wifi); }
+  .border-thread { border-color: var(--sp-thread); }
+
+  /* Shadow utilities */
+  .shadow-card { box-shadow: var(--sp-shadow-card); }
+  .shadow-search { box-shadow: var(--sp-shadow-search); }
+  .shadow-blue { box-shadow: 0 2px 8px var(--sp-blue-shadow); }
+  .shadow-blue-lg { box-shadow: 0 4px 16px var(--sp-blue-shadow); }
+  .bg-brand { background: var(--sp-blue-600); }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, var(--sp-gradient-from), var(--sp-gradient-to));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in { animation: fadeIn 0.5s ease both; }
+  .animate-fade-in-up { animation: fadeInUp 0.6s ease both; }
+  .animate-pulse-dot { animation: pulse-dot 2s ease infinite; }
+
+  /* Theme toggle icon visibility */
+  .theme-icon-sun { display: none; }
+  .theme-icon-moon { display: block; }
+  [data-theme="dark"] .theme-icon-sun { display: block; }
+  [data-theme="dark"] .theme-icon-moon { display: none; }
+
+  /* Hover state for cards */
+  .card-hover {
+    transition: all 0.2s;
+  }
+  .card-hover:hover {
+    border-color: var(--sp-border-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--sp-shadow-card);
+  }
+
+  /* Table row hover */
+  .row-hover:hover {
+    background: var(--sp-table-row-hover);
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--sp-border); border-radius: 2px; }
 }
 
 @layer components {
   .panel {
-    @apply border-border bg-surface rounded-3xl border backdrop-blur;
-    box-shadow: var(--shadow);
+    background: var(--sp-bg-surface);
+    border: 1px solid var(--sp-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--sp-shadow-card);
   }
+
 }

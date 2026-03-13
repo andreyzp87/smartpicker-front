@@ -1,0 +1,54 @@
+---
+import { formatProtocolLabel, getProtocolStyle, joinClasses } from "../../lib/ui";
+
+interface Props {
+  protocol: string;
+  count: string;
+  verified: string;
+  reported: string;
+  untested: string;
+  width: number;
+}
+
+const { protocol, count, verified, reported, untested, width } = Astro.props;
+const style = getProtocolStyle(protocol);
+---
+
+<article class="flex flex-col gap-4 rounded-2xl border border-theme bg-surface p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <div class="text-base font-bold tracking-tight">
+        {formatProtocolLabel(protocol)}
+      </div>
+      <div class="mt-1 inline-flex items-center gap-2 text-xs text-muted">
+        <span class={joinClasses("inline-flex h-2.5 w-2.5 rounded-full", style.badge)}>
+        </span>
+        {formatProtocolLabel(protocol)}
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="text-lg font-bold font-mono tracking-tight text-primary">{count}</div>
+      <div class="text-[11px] tracking-wider uppercase text-muted">Devices</div>
+    </div>
+  </div>
+
+  <div class="h-2 overflow-hidden rounded-full bg-[var(--sp-bar-track)]">
+    <div class={joinClasses("h-full rounded-full", style.badge)} style={`width:${width}%`}>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-3">
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-sm font-bold text-primary">{verified}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Verified</span>
+    </div>
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-sm font-bold text-primary">{reported}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Reported</span>
+    </div>
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-sm font-bold text-muted">{untested}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Untested</span>
+    </div>
+  </div>
+</article>

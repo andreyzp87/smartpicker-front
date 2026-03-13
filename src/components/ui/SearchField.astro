@@ -1,0 +1,58 @@
+---
+import { joinClasses } from "../../lib/ui";
+
+interface Props {
+  id?: string;
+  placeholder: string;
+  class?: string;
+  inputClass?: string;
+  compact?: boolean;
+  type?: "text" | "search";
+  name?: string;
+  ariaLabel?: string;
+  autocomplete?: string;
+}
+
+const {
+  id,
+  placeholder,
+  class: className,
+  inputClass,
+  compact = false,
+  type = "search",
+  name,
+  ariaLabel,
+  autocomplete = "off",
+} = Astro.props;
+---
+
+<label class={joinClasses("relative block", className)}>
+  <svg
+    class={joinClasses(
+      "pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted",
+      compact && "left-3.5",
+    )}
+    width={compact ? "14" : "16"}
+    height={compact ? "14" : "16"}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  >
+    <circle cx="11" cy="11" r="8"></circle>
+    <path d="m21 21-4.3-4.3"></path>
+  </svg>
+  <input
+    id={id}
+    type={type}
+    name={name}
+    placeholder={placeholder}
+    aria-label={ariaLabel ?? placeholder}
+    autocomplete={autocomplete}
+    class={joinClasses(
+      "w-full rounded-[10px] border border-theme bg-surface text-primary outline-none transition-all placeholder:text-[var(--sp-text-muted)] focus:border-[rgba(37,99,235,0.4)] focus:shadow-[var(--sp-shadow-search)]",
+      compact ? "py-2.5 pr-3.5 pl-9 text-[13px]" : "py-3 pr-4 pl-10 text-sm",
+      inputClass,
+    )}
+  />
+</label>

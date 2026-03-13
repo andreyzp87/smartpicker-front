@@ -1,0 +1,36 @@
+---
+import ProtocolBadge from "../ui/ProtocolBadge.astro";
+import { getProtocolStyle } from "../../lib/ui";
+
+interface Props {
+  href: string;
+  name: string;
+  manufacturerName: string;
+  model?: string | null;
+  protocolSlug?: string | null;
+}
+
+const { href, name, manufacturerName, model, protocolSlug } = Astro.props;
+const style = getProtocolStyle(protocolSlug);
+---
+
+<a
+  href={href}
+  class="flex items-center gap-3 border-b border-theme px-5 py-3.5 text-primary transition-colors hover:bg-[var(--sp-table-row-hover)] last:border-b-0"
+>
+  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-elevated text-sm font-semibold text-muted">
+    {style.shortLabel}
+  </div>
+  <div class="min-w-0 flex-1">
+    <div class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
+      {name}
+    </div>
+    <div class="text-xs text-muted">
+      {manufacturerName} · {model ?? "Model TBD"}
+    </div>
+  </div>
+  <ProtocolBadge
+    slug={protocolSlug}
+    class="px-2 py-0.5 text-[10px] font-semibold uppercase"
+  />
+</a>

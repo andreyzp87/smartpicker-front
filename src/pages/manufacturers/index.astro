@@ -1,0 +1,293 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ManufacturerListCard from "../../components/manufacturers/ManufacturerListCard.astro";
+import ManufacturerTopCard from "../../components/manufacturers/ManufacturerTopCard.astro";
+import PageIntro from "../../components/ui/PageIntro.astro";
+import { readExportJson } from "../../lib/exports";
+
+interface EntityRef {
+  slug: string;
+  name: string;
+}
+
+interface ManufacturerSummary {
+  slug: string;
+  name: string;
+  website: string | null;
+  logoUrl: string | null;
+  deviceCount: number;
+}
+
+interface ManufacturersExport {
+  count: number;
+  manufacturers: ManufacturerSummary[];
+}
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  model: string | null;
+  primaryProtocol: string | null;
+}
+
+interface ProductsExport {
+  count: number;
+  products: ProductSummary[];
+}
+
+const manufacturers = await readExportJson<ManufacturersExport>(
+  "manufacturers.json",
+);
+const products = await readExportJson<ProductsExport>("products.json");
+
+const productsByManufacturer = new Map<string, ProductSummary[]>();
+
+for (const product of products.products) {
+  const slug = product.manufacturer?.slug;
+
+  if (!slug) {
+    continue;
+  }
+
+  const existing = productsByManufacturer.get(slug) ?? [];
+  existing.push(product);
+  productsByManufacturer.set(slug, existing);
+}
+
+const enrichedManufacturers = manufacturers.manufacturers
+  .map((manufacturer) => {
+    const mappedProducts = productsByManufacturer.get(manufacturer.slug) ?? [];
+    const protocolCounts = mappedProducts.reduce<Record<string, number>>(
+      (counts, product) => {
+        if (product.primaryProtocol) {
+          counts[product.primaryProtocol] = (counts[product.primaryProtocol] ?? 0) + 1;
+        }
+
+        return counts;
+      },
+      {},
+    );
+
+    const models = mappedProducts
+      .map((product) => product.model)
+      .filter((value): value is string => Boolean(value))
+      .slice(0, 4);
+    const normalizedName = manufacturer.name.trim().toUpperCase();
+    const firstChar = normalizedName.charAt(0);
+    const letter = /[A-Z]/.test(firstChar) ? firstChar : "#";
+    const initials = manufacturer.name
+      .split(/[\s-]+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+    return {
+      ...manufacturer,
+      mappedProducts,
+      protocolCounts,
+      models,
+      letter,
+      initials,
+    };
+  })
+  .sort((left, right) => left.name.localeCompare(right.name));
+
+const topManufacturers = [...enrichedManufacturers]
+  .sort((left, right) =>
+    right.deviceCount === left.deviceCount
+      ? left.name.localeCompare(right.name)
+      : right.deviceCount - left.deviceCount,
+  )
+  .slice(0, 4);
+
+const manufacturersByLetter = enrichedManufacturers.reduce<
+  Record<string, typeof enrichedManufacturers>
+>((groups, manufacturer) => {
+  groups[manufacturer.letter] ??= [];
+  groups[manufacturer.letter].push(manufacturer);
+  return groups;
+}, {});
+
+const activeLetters = new Set(enrichedManufacturers.map((manufacturer) => manufacturer.letter));
+const allLetters = [
+  ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "#",
+];
+const totalProtocols = new Set(
+  enrichedManufacturers.flatMap((manufacturer) => Object.keys(manufacturer.protocolCounts)),
+).size;
+
+const formatCount = new Intl.NumberFormat("en-US");
+---
+
+<BaseLayout
+  title="Manufacturers | SmartPicker"
+  description="Browse exported smart home device manufacturers by protocol coverage and mapped device counts."
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <PageIntro
+      title="Manufacturers"
+      description="Browse smart home device manufacturers and see which protocols each brand supports in the current export snapshot. Where the dataset is sparse, the page stays honest and focuses on device counts and protocol distribution."
+      stats={[
+        { value: formatCount.format(manufacturers.count), label: "Manufacturers" },
+        { value: formatCount.format(products.count), label: "Total devices" },
+        { value: formatCount.format(totalProtocols), label: "Protocols covered" },
+      ]}
+    />
+
+    <label class="relative mb-6 block">
+      <svg
+        class="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-muted"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.3-4.3"></path>
+      </svg>
+      <input
+        id="manufacturer-search"
+        type="search"
+        placeholder="Search manufacturers..."
+        aria-label="Search manufacturers"
+        autocomplete="off"
+        class="w-full rounded-2xl border border-theme bg-surface py-3 pr-4 pl-11 text-primary outline-none transition-all placeholder:text-[var(--sp-text-muted)] focus:border-[rgba(37,99,235,0.4)] focus:shadow-[var(--sp-shadow-search)]"
+      />
+    </label>
+
+    <div class="mb-4 text-[13px] font-semibold tracking-wider uppercase text-muted">
+      Most Devices
+    </div>
+
+    <section
+      class="mb-7 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]"
+      id="manufacturer-top-grid"
+    >
+      {
+        topManufacturers.map((manufacturer, index) => (
+          <div
+            data-manufacturer-card
+            data-name={manufacturer.name.toLowerCase()}
+            data-letter={manufacturer.letter}
+            style={`animation-delay:${0.05 + index * 0.05}s`}
+          >
+            <ManufacturerTopCard
+              href={`/manufacturers/${manufacturer.slug}`}
+              initials={manufacturer.initials}
+              name={manufacturer.name}
+              deviceCount={formatCount.format(manufacturer.deviceCount)}
+              protocolEntries={Object.entries(manufacturer.protocolCounts)
+                .sort((left, right) => right[1] - left[1])
+                .map(([protocol, count]) => ({ protocol, count }))}
+              models={manufacturer.models}
+            />
+          </div>
+        ))
+      }
+    </section>
+
+    <div class="mb-6 flex flex-wrap gap-1" id="manufacturer-alpha-nav">
+      {
+        allLetters.map((letter) => {
+          const isActive = activeLetters.has(letter);
+
+          return (
+            <button
+              type="button"
+              class:list={[
+                "flex h-8 w-8 items-center justify-center rounded-lg border text-xs font-semibold transition-all",
+                isActive
+                  ? "border-[var(--sp-blue-500)] bg-[var(--sp-blue-bg)] text-[var(--sp-blue-600)] shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+                  : "border-theme bg-surface text-secondary opacity-40",
+              ]}
+              data-letter-button={letter}
+              data-active={isActive ? "true" : "false"}
+              disabled={!isActive}
+            >
+              {letter}
+            </button>
+          );
+        })
+      }
+    </div>
+
+    <div id="manufacturer-groups">
+      {
+        allLetters
+          .filter((letter) => activeLetters.has(letter))
+          .map((letter) => (
+            <section class="mb-8" data-letter-section={letter}>
+              <h2
+                class="mb-4 border-b border-theme pb-2 text-xl font-bold tracking-tight"
+                id={`letter-${letter === "#" ? "num" : letter}`}
+              >
+                {letter}
+              </h2>
+              <div class="mb-8 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+                {
+                  manufacturersByLetter[letter].map((manufacturer) => {
+                    return (
+                      <ManufacturerListCard
+                        href={`/manufacturers/${manufacturer.slug}`}
+                        initials={manufacturer.initials}
+                        name={manufacturer.name}
+                        deviceCount={formatCount.format(manufacturer.deviceCount)}
+                        protocolSlugs={Object.keys(manufacturer.protocolCounts)}
+                        dataName={manufacturer.name.toLowerCase()}
+                        dataLetter={manufacturer.letter}
+                      />
+                    );
+                  })
+                }
+              </div>
+            </section>
+          ))
+      }
+    </div>
+  </div>
+
+  <script is:inline>
+    (() => {
+      const search = document.getElementById("manufacturer-search");
+      const sections = [...document.querySelectorAll("[data-letter-section]")];
+      const alphaButtons = [...document.querySelectorAll("[data-letter-button]")];
+
+      function applyFilter() {
+        const query = search?.value.trim().toLowerCase() ?? "";
+
+        document.querySelectorAll("[data-manufacturer-card]").forEach((card) => {
+          const name = card.dataset.name ?? "";
+          const visible = query.length === 0 || name.includes(query);
+
+          card.classList.toggle("hidden", !visible);
+        });
+
+        sections.forEach((section) => {
+          const cards = [...section.querySelectorAll("[data-manufacturer-card]")];
+          const anyVisible = cards.some((card) => !card.classList.contains("hidden"));
+          section.classList.toggle("hidden", !anyVisible);
+        });
+      }
+
+      alphaButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.disabled) {
+            return;
+          }
+
+          const id = button.dataset.letterButton === "#"
+            ? "letter-num"
+            : `letter-${button.dataset.letterButton}`;
+          document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+
+      search?.addEventListener("input", applyFilter);
+    })();
+  </script>
+</BaseLayout>

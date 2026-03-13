@@ -1,0 +1,60 @@
+---
+import ProtocolBadge from "../ui/ProtocolBadge.astro";
+import { formatBooleanFact, getProtocolStyle } from "../../lib/ui";
+
+interface Props {
+  href: string;
+  name: string;
+  manufacturerName: string;
+  model?: string | null;
+  protocolSlug?: string | null;
+  categoryName?: string | null;
+  localControl?: boolean | null;
+  hubCount: number;
+}
+
+const {
+  href,
+  name,
+  manufacturerName,
+  model,
+  protocolSlug,
+  categoryName,
+  localControl,
+  hubCount,
+} = Astro.props;
+const style = getProtocolStyle(protocolSlug);
+---
+
+<a
+  href={href}
+  class="grid min-w-[720px] grid-cols-[52px_1fr_120px_120px_100px_140px] items-center gap-4 rounded-[10px] border border-transparent bg-surface px-4 py-3 text-primary transition-all hover:border-theme-hover hover:shadow-card"
+>
+  <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-elevated text-sm font-semibold text-muted">
+    {style.shortLabel}
+  </div>
+  <div class="min-w-0">
+    <div class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold">
+      {name}
+    </div>
+    <div class="text-xs text-muted">
+      {manufacturerName} · {model ?? "Model TBD"}
+    </div>
+  </div>
+  <ProtocolBadge
+    slug={protocolSlug}
+    class="w-fit px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+  />
+  <span class="text-[13px] text-secondary">
+    {categoryName ?? "Uncategorized"}
+  </span>
+  <span class="text-xs font-medium text-secondary">
+    {formatBooleanFact(localControl)}
+  </span>
+  <div class="flex items-center gap-0.5">
+    <span class="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-green-subtle text-[9px] font-bold text-green">
+      {hubCount}
+    </span>
+    <span class="ml-auto text-[11px] text-muted">{hubCount}</span>
+  </div>
+</a>

@@ -1,0 +1,25 @@
+---
+import {
+  getCompatibilityStatusStyle,
+  joinClasses,
+} from "../../lib/ui";
+
+interface Props {
+  status: string | null | undefined;
+  fallbackLabel?: string;
+  class?: string;
+}
+
+const { status, fallbackLabel = "Unknown", class: className } = Astro.props;
+const style = getCompatibilityStatusStyle(status, fallbackLabel);
+---
+
+<span
+  class={joinClasses(
+    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+    style.className,
+    className,
+  )}
+>
+  {style.label}
+</span>

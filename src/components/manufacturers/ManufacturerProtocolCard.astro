@@ -1,0 +1,41 @@
+---
+import { formatProtocolLabel, getProtocolStyle, joinClasses } from "../../lib/ui";
+
+interface Props {
+  protocol: string;
+  count: string;
+  devices: string;
+  reported: string;
+  percentage: number;
+}
+
+const { protocol, count, devices, reported, percentage } = Astro.props;
+const style = getProtocolStyle(protocol);
+---
+
+<article class="flex flex-col gap-4 rounded-2xl border border-theme bg-surface p-5 shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover">
+  <div class="flex items-start justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <span class={joinClasses("inline-flex h-2.5 w-2.5 rounded-full", style.badge)}>
+      </span>
+      <span class="text-base font-bold">{formatProtocolLabel(protocol)}</span>
+    </div>
+    <span class="font-mono text-base font-bold text-primary">{count}</span>
+  </div>
+
+  <div class="h-2 overflow-hidden rounded-full bg-[var(--sp-bar-track)]">
+    <div class={joinClasses("h-full rounded-full", style.badge)} style={`width:${percentage}%`}>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-base font-bold text-primary">{devices}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Devices</span>
+    </div>
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-base font-bold text-primary">{reported}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Reported</span>
+    </div>
+  </div>
+</article>

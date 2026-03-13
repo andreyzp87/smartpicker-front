@@ -1,0 +1,67 @@
+---
+interface StatItem {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  title: string;
+  description: string;
+  eyebrow?: string;
+  stats?: StatItem[];
+  titleClass?: string;
+  descriptionClass?: string;
+}
+
+const {
+  title,
+  description,
+  eyebrow,
+  stats = [],
+  titleClass,
+  descriptionClass,
+} = Astro.props;
+---
+
+<section class="animate-fade-in py-10 pb-8">
+  {
+    eyebrow && (
+      <div class="mb-2 text-[13px] font-semibold tracking-wider uppercase text-muted">
+        {eyebrow}
+      </div>
+    )
+  }
+  <h1
+    class:list={[
+      "mb-2 text-[32px] font-bold leading-tight tracking-[-0.03em] max-md:text-[28px]",
+      titleClass,
+    ]}
+  >
+    {title}
+  </h1>
+  <p
+    class:list={[
+      "max-w-[840px] text-base leading-relaxed text-secondary",
+      descriptionClass,
+    ]}
+  >
+    {description}
+  </p>
+  <slot />
+  {
+    stats.length > 0 && (
+      <div class="mt-5 flex flex-wrap gap-7">
+        {stats.map((stat) => (
+          <div class="flex flex-col gap-0.5">
+            <span class="text-gradient text-2xl font-bold font-mono tracking-tight">
+              {stat.value}
+            </span>
+            <span class="text-xs font-medium tracking-wider uppercase text-muted">
+              {stat.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+</section>

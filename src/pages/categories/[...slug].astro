@@ -1,0 +1,227 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
+import ButtonLink from "../../components/ui/ButtonLink.astro";
+import InfoRowLink from "../../components/ui/InfoRowLink.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import SidebarPanel from "../../components/ui/SidebarPanel.astro";
+import StatGrid from "../../components/ui/StatGrid.astro";
+import { readExportJson } from "../../lib/exports";
+import { formatProtocolLabel } from "../../lib/ui";
+
+interface EntityRef {
+  id: number;
+  slug: string;
+  name: string;
+}
+
+interface CategoryPathEntry {
+  slug: string;
+  path: string;
+  pathSegments: string[];
+}
+
+interface CategoryPathsExport {
+  categories: CategoryPathEntry[];
+}
+
+interface CategoryDetail {
+  slug: string;
+  name: string;
+  path: string;
+  pathSegments: string[];
+  ancestors: EntityRef[];
+  children: EntityRef[];
+  directDeviceCount: number;
+  deviceCount: number;
+  updatedAt: string | null;
+  directDeviceSlugs: string[];
+  deviceSlugs: string[];
+}
+
+interface CategoryDetailResponse {
+  generated: string;
+  category: CategoryDetail;
+}
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  model: string | null;
+  primaryProtocol: string | null;
+  compatibleHubSlugs: string[];
+}
+
+interface ProductsExport {
+  products: ProductSummary[];
+}
+
+export async function getStaticPaths() {
+  const paths = await readExportJson<CategoryPathsExport>("categories/paths.json");
+
+  return paths.categories.map((category) => ({
+    params: {
+      slug: category.pathSegments,
+    },
+  }));
+}
+
+const slugSegments = Astro.params.slug?.split("/").filter(Boolean) ?? [];
+
+if (slugSegments.length === 0) {
+  throw new Error("Missing category slug.");
+}
+
+const categoryPath = slugSegments.join("/");
+const detail = await readExportJson<CategoryDetailResponse>(
+  `categories/${categoryPath}.json`,
+);
+const products = await readExportJson<ProductsExport>("products.json");
+
+const category = detail.category;
+const mappedProducts = products.products.filter((product) =>
+  category.deviceSlugs.includes(product.slug),
+);
+const formatCount = new Intl.NumberFormat("en-US");
+const breadcrumbItems = [
+  { href: "/", label: "Home" },
+  { href: "/categories", label: "Categories" },
+  ...category.ancestors.map((ancestor, index) => ({
+    href: `/categories/${category.pathSegments.slice(0, index + 1).join("/")}`,
+    label: ancestor.name,
+  })),
+  { label: category.name },
+];
+const updatedLabel = category.updatedAt
+  ? new Date(category.updatedAt).toLocaleDateString("en-US", {
+      dateStyle: "medium",
+    })
+  : "Unknown";
+const exportGenerated = new Date(detail.generated).toLocaleDateString("en-US", {
+  dateStyle: "medium",
+});
+const summaryText =
+  category.children.length > 0
+    ? `${category.name} currently includes ${category.children.length} nested categorie${category.children.length === 1 ? "y" : "s"} and ${category.deviceCount} total mapped device${category.deviceCount === 1 ? "" : "s"} in the export snapshot.`
+    : `${category.name} is a leaf category in the current export snapshot with ${category.deviceCount} mapped device${category.deviceCount === 1 ? "" : "s"}.`;
+---
+
+<BaseLayout
+  title={`${category.name} | SmartPicker`}
+  description={`${category.name} category page generated from SmartPicker exports.`}
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <Breadcrumbs items={breadcrumbItems} />
+
+    <section class="animate-fade-in py-8 pb-6">
+      <div class="flex items-center gap-6 max-md:flex-col max-md:items-start">
+        <div class="flex h-20 w-20 items-center justify-center rounded-[28px] bg-elevated text-2xl font-bold tracking-[-0.05em] text-secondary">
+          #
+        </div>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[clamp(34px,4vw,48px)] font-bold leading-[1.05] tracking-[-0.035em]">
+            {category.name}
+          </h1>
+          <p class="mt-3 max-w-[860px] text-base leading-relaxed text-secondary">
+            {summaryText} This route is generated directly from the export
+            contract, so richer taxonomy copy can be layered in later without
+            changing the page structure.
+          </p>
+
+          <div class="mt-6 max-w-[760px]">
+            <StatGrid
+              columnsClass="grid-cols-3 max-md:grid-cols-1"
+              items={[
+                { value: formatCount.format(category.deviceCount), label: "Total devices" },
+                { value: formatCount.format(category.directDeviceCount), label: "Direct devices" },
+                { value: formatCount.format(category.children.length), label: "Children" },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="flex flex-col gap-6">
+        <section class="animate-fade-in">
+          <SectionHeader
+            eyebrow="Hierarchy"
+            title="Subcategories"
+            description="Nested category routes are generated from the same export tree, so this section mirrors the current taxonomy without placeholder copy."
+          />
+          <div class="grid gap-3 md:grid-cols-2">
+            {
+              category.children.length > 0 ? (
+                category.children.map((child) => (
+                  <InfoRowLink
+                    href={`/categories/${[...category.pathSegments, child.slug].join("/")}`}
+                    icon="#"
+                    title={child.name}
+                    meta={child.slug}
+                  />
+                ))
+              ) : (
+                <div class="rounded-2xl border border-theme bg-surface px-5 py-6 text-sm text-muted shadow-card md:col-span-2">
+                  No nested categories are exported beneath this path.
+                </div>
+              )
+            }
+          </div>
+        </section>
+
+        <section class="animate-fade-in">
+          <SectionHeader
+            eyebrow="Membership"
+            title="Mapped devices"
+            description="Each entry below comes straight from the exported device index. If a device has sparse metadata, the page reflects that rather than guessing."
+          />
+          <div class="grid gap-3 md:grid-cols-2">
+            {
+              mappedProducts.length > 0 ? (
+                mappedProducts.map((product) => (
+                  <InfoRowLink
+                    href={`/devices/${product.slug}`}
+                    icon={product.model?.slice(0, 2).toUpperCase() ?? "SP"}
+                    title={product.name}
+                    meta={`${product.manufacturer?.name ?? "Unknown manufacturer"} · ${product.model ?? "Model TBD"}${product.primaryProtocol ? ` · ${formatProtocolLabel(product.primaryProtocol)}` : ""}`}
+                  />
+                ))
+              ) : (
+                <div class="rounded-2xl border border-theme bg-surface px-5 py-6 text-sm text-muted shadow-card md:col-span-2">
+                  No devices are mapped to this category in the current export.
+                </div>
+              )
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6 max-lg:order-first">
+        <div class="animate-fade-in" style="animation-delay:0.1s">
+          <SidebarPanel title="Category Info">
+            <div class="flex flex-col gap-3 text-sm">
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Path</span>
+                <span class="font-medium font-mono text-secondary">{category.path}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Updated</span>
+                <span class="font-medium text-secondary">{updatedLabel}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Export generated</span>
+                <span class="font-medium text-secondary">{exportGenerated}</span>
+              </div>
+            </div>
+          </SidebarPanel>
+        </div>
+
+        <ButtonLink href="/devices" variant="secondary" class="justify-center">
+          Browse all devices →
+        </ButtonLink>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,98 @@
+---
+import { getProtocolStyle, joinClasses, sentenceCase } from "../../lib/ui";
+
+interface StatusEntry {
+  status: string;
+  count: number;
+}
+
+interface Props {
+  href: string;
+  slug: string;
+  name: string;
+  description: string;
+  deviceCount: string;
+  manufacturerCount: string;
+  mappedHubCount: string;
+  supportingHubCount: string;
+  deviceShare: number;
+  statusEntries: StatusEntry[];
+}
+
+const {
+  href,
+  slug,
+  name,
+  description,
+  deviceCount,
+  manufacturerCount,
+  mappedHubCount,
+  supportingHubCount,
+  deviceShare,
+  statusEntries,
+} = Astro.props;
+
+const style = getProtocolStyle(slug);
+---
+
+<a
+  href={href}
+  class="flex flex-col gap-4 rounded-2xl border border-theme bg-surface p-5 text-primary shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+>
+  <div class="flex items-start gap-4">
+    <div
+      class={joinClasses(
+        "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold tracking-[-0.04em]",
+        style.badge,
+        style.text,
+      )}
+    >
+      {style.shortLabel}
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="text-lg font-bold tracking-tight">{name}</div>
+      <div class="mt-1 font-mono text-[13px] text-muted">{deviceCount} devices</div>
+    </div>
+  </div>
+
+  <p class="text-sm leading-relaxed text-secondary">{description}</p>
+
+  <div class="h-2 overflow-hidden rounded-full bg-[var(--sp-bar-track)]">
+    <div
+      class={joinClasses("h-full rounded-full", style.badge)}
+      style={`width:${deviceShare}%`}
+    >
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-3">
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-base font-bold text-primary">{manufacturerCount}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Brands</span>
+    </div>
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-base font-bold text-primary">{mappedHubCount}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Mapped hubs</span>
+    </div>
+    <div class="flex flex-col gap-0.5">
+      <span class="font-mono text-base font-bold text-primary">{supportingHubCount}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Declaring hubs</span>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    {
+      statusEntries.length > 0 ? (
+        statusEntries.map((entry) => (
+          <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
+            {sentenceCase(entry.status)} {entry.count}
+          </span>
+        ))
+      ) : (
+        <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
+          No devices in current export
+        </span>
+      )
+    }
+  </div>
+</a>

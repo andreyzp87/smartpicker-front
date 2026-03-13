@@ -1,0 +1,115 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CategorySummaryCard from "../../components/categories/CategorySummaryCard.astro";
+import EmptyState from "../../components/ui/EmptyState.astro";
+import PageIntro from "../../components/ui/PageIntro.astro";
+import { readExportJson } from "../../lib/exports";
+
+interface CategorySummary {
+  slug: string;
+  name: string;
+  path: string;
+  pathSegments: string[];
+  children: { id: number; slug: string; name: string }[];
+  directDeviceCount: number;
+  deviceCount: number;
+}
+
+interface CategoriesExport {
+  count: number;
+  categories: CategorySummary[];
+}
+
+interface ProductsExport {
+  count: number;
+}
+
+const categories = await readExportJson<CategoriesExport>("categories.json");
+const products = await readExportJson<ProductsExport>("products.json");
+
+const rootCategories = categories.categories.filter(
+  (category) => category.pathSegments.length <= 1,
+);
+const subcategoryCount = categories.categories.filter(
+  (category) => category.pathSegments.length > 1,
+).length;
+const formatCount = new Intl.NumberFormat("en-US");
+---
+
+<BaseLayout
+  title="Categories | SmartPicker"
+  description="Browse device categories in SmartPicker. The route is ready for nested category exports and shows the current snapshot status."
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <PageIntro
+      title="Device Categories"
+      description={`Explore devices organized by function. The route already supports nested category pages from the export contract, and right now it reflects the actual state of the current snapshot rather than placeholder category data.`}
+      stats={[
+        { value: formatCount.format(rootCategories.length), label: "Categories" },
+        { value: formatCount.format(subcategoryCount), label: "Subcategories" },
+        { value: formatCount.format(products.count), label: "Total devices" },
+      ]}
+    />
+
+    {
+      categories.count > 0 ? (
+        <section class="grid gap-4 pb-20 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+          {rootCategories.map((category, index) => (
+            <div style={`animation-delay:${0.05 + index * 0.05}s`}>
+              <CategorySummaryCard
+                href={`/categories/${category.path}`}
+                name={category.name}
+                deviceCount={formatCount.format(category.deviceCount)}
+                description={
+                  category.children.length > 0
+                    ? `${category.children.length} nested categorie${category.children.length === 1 ? "y" : "s"} exported under this section.`
+                    : "Top-level category ready for direct device browsing."
+                }
+                directCount={formatCount.format(category.directDeviceCount)}
+                nestedCount={formatCount.format(
+                  category.deviceCount - category.directDeviceCount,
+                )}
+              />
+            </div>
+          ))}
+        </section>
+      ) : (
+        <section class="pb-20">
+          <EmptyState
+            icon="#"
+            title="Category exports are still empty"
+            description="`categories.json` and `categories/paths.json` are present, but the current March 12, 2026 export snapshot contains zero categories. The routes are now in place, so once category data is published the pages can render real hierarchy and detail content without another structural pass."
+            primaryAction={{ href: "/devices", label: "Browse all devices" }}
+            secondaryAction={{
+              href: "/manufacturers",
+              label: "Explore manufacturers",
+            }}
+          >
+            <div class="mt-4 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+              <article class="rounded-2xl border border-theme bg-elevated p-5">
+                <h3 class="mb-3 text-lg font-bold tracking-tight">
+                  What is ready already
+                </h3>
+                <p class="text-sm leading-relaxed text-secondary">
+                  The categories index, nested category route, and shared
+                  navigation are all implemented and build successfully against
+                  the current contract.
+                </p>
+              </article>
+              <article class="rounded-2xl border border-theme bg-elevated p-5">
+                <h3 class="mb-3 text-lg font-bold tracking-tight">
+                  What the export still needs
+                </h3>
+                <p class="text-sm leading-relaxed text-secondary">
+                  Once `categories.json` includes entries with `path`,
+                  `pathSegments`, and `deviceCount`, this section can switch from
+                  empty state to the card grid from the HTML examples automatically.
+                </p>
+              </article>
+            </div>
+          </EmptyState>
+        </section>
+      )
+    }
+  </div>
+</BaseLayout>

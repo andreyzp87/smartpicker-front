@@ -1,0 +1,59 @@
+---
+import { getProtocolStyle, joinClasses } from "../../lib/ui";
+
+interface Props {
+  href: string;
+  initials: string;
+  name: string;
+  deviceCount: string;
+  protocolSlugs: string[];
+  dataName: string;
+  dataLetter: string;
+}
+
+const {
+  href,
+  initials,
+  name,
+  deviceCount,
+  protocolSlugs,
+  dataName,
+  dataLetter,
+} = Astro.props;
+---
+
+<a
+  href={href}
+  class="flex items-center gap-4 rounded-2xl border border-theme bg-surface p-4 text-primary shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+  data-manufacturer-card
+  data-name={dataName}
+  data-letter={dataLetter}
+>
+  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-elevated text-sm font-bold text-secondary">
+    {initials}
+  </div>
+  <div class="min-w-0 flex-1">
+    <div class="mb-0.5 text-[15px] font-semibold">{name}</div>
+    <div class="text-[13px] text-muted">{deviceCount} devices</div>
+    <div class="mt-2 flex gap-1">
+      {
+        protocolSlugs.length > 0 ? (
+          protocolSlugs.map((protocol) => {
+            const style = getProtocolStyle(protocol);
+            return (
+              <span
+                class={joinClasses(
+                  "inline-flex h-2.5 w-2.5 rounded-full",
+                  style.badge,
+                )}
+              >
+              </span>
+            );
+          })
+        ) : (
+          <span class="inline-flex h-2.5 w-2.5 rounded-full bg-badge"></span>
+        )
+      }
+    </div>
+  </div>
+</a>

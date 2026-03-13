@@ -1,0 +1,377 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import HubCoverageCard from "../../components/hubs/HubCoverageCard.astro";
+import ButtonLink from "../../components/ui/ButtonLink.astro";
+import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
+import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import StatGrid from "../../components/ui/StatGrid.astro";
+import { readExportJson } from "../../lib/exports";
+import { formatProtocolLabel, getProtocolStyle, sentenceCase } from "../../lib/ui";
+
+interface EntityRef {
+  id: number;
+  slug: string;
+  name: string;
+}
+
+interface HubDetail {
+  id: number;
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  protocolsSupported: string[];
+  description: string | null;
+  deviceCount: number;
+  statusCounts: Record<string, number>;
+  protocolCounts: Record<string, number>;
+  updatedAt: string | null;
+  deviceSlugs: string[];
+}
+
+interface HubDetailResponse {
+  generated: string;
+  hub: HubDetail;
+}
+
+interface HubSlugsResponse {
+  slugs: string[];
+}
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  model: string | null;
+  category: EntityRef | null;
+  primaryProtocol: string | null;
+  compatibleHubSlugs: string[];
+  compatibilityStatuses: string[];
+}
+
+interface ProductsExport {
+  products: ProductSummary[];
+}
+
+interface HubsExport {
+  hubs: HubDetail[];
+}
+
+export async function getStaticPaths() {
+  const { slugs } = await readExportJson<HubSlugsResponse>("hubs/slugs.json");
+
+  return slugs.map((slug) => ({
+    params: { slug },
+  }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error("Missing hub slug.");
+}
+
+const detail = await readExportJson<HubDetailResponse>(`hubs/${slug}.json`);
+const products = await readExportJson<ProductsExport>("products.json");
+const allHubs = await readExportJson<HubsExport>("hubs.json");
+
+const hub = detail.hub;
+const mappedDevices = products.products.filter((product) =>
+  hub.deviceSlugs.includes(product.slug),
+);
+const relatedHubs = allHubs.hubs
+  .filter((candidate) => candidate.slug !== hub.slug)
+  .sort((left, right) => {
+    const leftScore = left.protocolsSupported.filter((protocol) =>
+      hub.protocolsSupported.includes(protocol),
+    ).length;
+    const rightScore = right.protocolsSupported.filter((protocol) =>
+      hub.protocolsSupported.includes(protocol),
+    ).length;
+
+    if (leftScore !== rightScore) {
+      return rightScore - leftScore;
+    }
+
+    return right.deviceCount - left.deviceCount;
+  })
+  .slice(0, 4);
+
+const formatCount = new Intl.NumberFormat("en-US");
+
+const updatedLabel = hub.updatedAt
+  ? new Date(hub.updatedAt).toLocaleDateString("en-US", { dateStyle: "medium" })
+  : "Unknown";
+const exportGenerated = new Date(detail.generated).toLocaleString("en-US", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const description =
+  hub.description ??
+  `${hub.name} is included in the current SmartPicker snapshot with ${hub.deviceCount} mapped devices and ${hub.protocolsSupported.length} declared protocol families.`;
+---
+
+<BaseLayout
+  title={`${hub.name} | SmartPicker`}
+  description={`${hub.name} supported protocols, mapped devices, and compatibility coverage from the SmartPicker hub export.`}
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <Breadcrumbs
+      items={[
+        { href: "/", label: "Home" },
+        { href: "/hubs", label: "Hubs" },
+        { label: hub.name },
+      ]}
+    />
+
+    <section class="animate-fade-in py-8 pb-10">
+      <div class="flex items-center gap-8 max-md:flex-col max-md:items-start">
+        <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-theme bg-elevated text-[34px] font-semibold text-secondary">
+          H
+        </div>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-[clamp(34px,4vw,48px)] font-bold leading-[1.05] tracking-[-0.035em]">
+            {hub.name}
+          </h1>
+          <p class="mt-2 max-w-[760px] text-base leading-relaxed text-secondary">{description}</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            {
+              hub.protocolsSupported.map((protocol) => (
+                <ProtocolBadge slug={protocol} />
+              ))
+            }
+          </div>
+          <div class="mt-6 max-w-[760px]">
+            <StatGrid
+              columnsClass="grid-cols-3 max-md:grid-cols-1"
+              items={[
+                { value: formatCount.format(hub.deviceCount), label: "Devices" },
+                {
+                  value: formatCount.format(hub.protocolsSupported.length),
+                  label: "Protocols",
+                },
+                {
+                  value: formatCount.format(hub.statusCounts.verified ?? 0),
+                  label: "Verified",
+                },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_320px]">
+      <div class="flex flex-col gap-6">
+        <section>
+          <SectionHeader eyebrow="Protocol coverage" title="Coverage by family" />
+          <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+            {
+              hub.protocolsSupported.map((protocol, index) => {
+                const count = hub.protocolCounts[protocol] ?? 0;
+                const width = hub.deviceCount > 0 ? Math.max((count / hub.deviceCount) * 100, count > 0 ? 8 : 0) : 0;
+
+                return (
+                  <div style={`animation-delay:${0.05 + index * 0.05}s`}>
+                    <HubCoverageCard
+                      protocol={protocol}
+                      count={formatCount.format(count)}
+                      verified={formatCount.format(hub.statusCounts.verified ?? 0)}
+                      reported={formatCount.format(hub.statusCounts.reported ?? 0)}
+                      untested={formatCount.format(hub.statusCounts.untested ?? 0)}
+                      width={width}
+                    />
+                  </div>
+                );
+              })
+            }
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
+          <div class="flex items-center justify-between border-b border-theme px-6 py-5">
+            <h2 class="text-2xl font-semibold tracking-tight">Mapped Devices</h2>
+            <span class="text-[13px] text-muted">
+              {formatCount.format(mappedDevices.length)} linked to this hub
+            </span>
+          </div>
+          <div class="grid gap-px bg-[var(--sp-border)] md:grid-cols-2">
+            {
+              mappedDevices.map((device) => {
+                const style = device.primaryProtocol
+                  ? getProtocolStyle(device.primaryProtocol)
+                  : { badge: "bg-badge", text: "text-secondary", shortLabel: "SP" };
+
+                return (
+                  <a
+                    href={`/devices/${device.slug}`}
+                    class="flex items-center gap-3 bg-surface px-5 py-4 text-primary transition-colors hover:bg-[var(--sp-table-row-hover)]"
+                  >
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-elevated text-sm font-semibold text-muted">
+                      {style.shortLabel}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-medium">
+                        {device.name}
+                      </div>
+                      <div class="text-xs text-muted">
+                        {device.manufacturer?.name ?? "Unknown manufacturer"} ·
+                        {" "}{device.model ?? "Model TBD"}
+                      </div>
+                    </div>
+                    <span class:list={[
+                      "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                      style.badge,
+                      style.text,
+                    ]}>
+                      {formatProtocolLabel(device.primaryProtocol)}
+                    </span>
+                  </a>
+                );
+              })
+            }
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
+          <div class="flex items-center justify-between border-b border-theme px-6 py-5">
+            <h2 class="text-2xl font-semibold tracking-tight">Status Breakdown</h2>
+            <span class="text-[13px] text-muted">From hub export</span>
+          </div>
+          <table class="w-full border-collapse">
+            <thead>
+              <tr>
+                <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                  Status
+                </th>
+                <th class="border-b border-theme bg-elevated px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
+                  Coverage
+                </th>
+                <th class="border-b border-theme bg-elevated px-6 py-2.5 text-right text-[11px] font-semibold tracking-wider uppercase text-muted">
+                  Devices
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                Object.entries(hub.statusCounts)
+                  .sort((left, right) => right[1] - left[1])
+                  .map(([status, count]) => {
+                    const width = hub.deviceCount > 0 ? (count / hub.deviceCount) * 100 : 0;
+
+                    return (
+                      <tr class="border-b border-theme last:border-b-0">
+                        <td class="px-6 py-4 text-sm font-medium">
+                          {sentenceCase(status)}
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="h-2 overflow-hidden rounded-sm bg-bar-track">
+                            <div
+                              class="h-full rounded-sm bg-blue-gradient"
+                              style={`width:${width}%`}
+                            >
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-6 py-4 text-right font-mono text-sm text-secondary">
+                          {formatCount.format(count)}
+                        </td>
+                      </tr>
+                    );
+                  })
+              }
+            </tbody>
+          </table>
+        </section>
+
+        <section class="animate-fade-in text-[15px] leading-relaxed text-secondary">
+          <h2 class="mb-4 text-2xl font-semibold tracking-tight">About {hub.name}</h2>
+          <p class="mb-4">
+            {description}
+          </p>
+          <p>
+            This page is assembled from the hub detail export and the shared
+            product index. As richer hub metadata arrives, this section can expand
+            into installation guidance, link collections, and integration notes
+            without changing the route structure.
+          </p>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6 max-lg:order-first">
+        <div class="animate-fade-in rounded-2xl border border-theme bg-surface p-5 shadow-card" style="animation-delay:0.1s">
+          <div class="mb-4 text-lg font-semibold tracking-tight">Hub Info</div>
+          <div class="flex flex-col gap-3 text-sm">
+            <div class="grid gap-3">
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Developer</span>
+                <span class="font-medium text-secondary">
+                  {hub.manufacturer?.name ?? "Unknown"}
+                </span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Slug</span>
+                <span class="font-medium font-mono text-secondary">{hub.slug}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Last updated</span>
+                <span class="font-medium text-secondary">{updatedLabel}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Export generated</span>
+                <span class="font-medium text-secondary">{exportGenerated}</span>
+              </div>
+              <div class="flex justify-between gap-4">
+                <span class="text-muted">Mapped devices</span>
+                <span class="font-medium font-mono text-secondary">
+                  {formatCount.format(hub.deviceCount)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="animate-fade-in rounded-2xl border border-theme bg-surface p-5 shadow-card" style="animation-delay:0.15s">
+          <div class="mb-4 text-lg font-semibold tracking-tight">Related Hubs</div>
+          <div class="flex flex-col gap-3">
+            {
+              relatedHubs.length > 0 ? (
+                relatedHubs.map((candidate) => (
+                  <a
+                    href={`/hubs/${candidate.slug}`}
+                    class="flex items-center gap-3 rounded-2xl border border-theme bg-elevated px-4 py-3 text-primary transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+                  >
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--sp-bg-surface)] text-sm font-semibold text-secondary">
+                      H
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-sm font-semibold">{candidate.name}</div>
+                      <div class="text-xs text-muted">
+                        {candidate.manufacturer?.name ?? "Independent"}
+                      </div>
+                    </div>
+                    <span class="font-mono text-sm font-semibold text-primary">
+                      {formatCount.format(candidate.deviceCount)}
+                    </span>
+                  </a>
+                ))
+              ) : (
+                <div class="text-[13px] text-muted">
+                  No other hubs are present in the current export snapshot yet.
+                </div>
+              )
+            }
+          </div>
+        </div>
+
+        <ButtonLink
+          href={`/devices?hub=${encodeURIComponent(hub.slug)}`}
+          variant="secondary"
+          class="justify-center"
+        >
+          Browse all {formatCount.format(hub.deviceCount)} devices →
+        </ButtonLink>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>

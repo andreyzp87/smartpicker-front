@@ -1,0 +1,90 @@
+---
+import { formatProtocolLabel, getProtocolStyle, joinClasses } from "../../lib/ui";
+
+interface ProtocolEntry {
+  protocol: string;
+  count: number;
+}
+
+interface Props {
+  href: string;
+  initials: string;
+  name: string;
+  deviceCount: string;
+  protocolEntries: ProtocolEntry[];
+  models: string[];
+}
+
+const { href, initials, name, deviceCount, protocolEntries, models } = Astro.props;
+const total = Math.max(
+  protocolEntries.reduce((sum, entry) => sum + entry.count, 0),
+  1,
+);
+---
+
+<a
+  href={href}
+  class="flex flex-col gap-4 rounded-2xl border border-theme bg-surface p-5 text-primary shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+>
+  <div class="flex items-center gap-4">
+    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-elevated text-sm font-bold text-secondary">
+      {initials}
+    </div>
+    <div class="min-w-0 flex-1">
+      <div class="text-base font-bold tracking-tight">{name}</div>
+      <div class="text-[13px] text-muted">{deviceCount} devices</div>
+    </div>
+  </div>
+
+  <div class="h-2 overflow-hidden rounded-full bg-[var(--sp-bar-track)]">
+    {
+      protocolEntries.map((entry) => {
+        const style = getProtocolStyle(entry.protocol);
+        return (
+          <div
+            class={joinClasses("inline-block h-full", style.badge)}
+            style={`width:${(entry.count / total) * 100}%`}
+          >
+          </div>
+        );
+      })
+    }
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    {
+      protocolEntries.length > 0 ? (
+        protocolEntries.map((entry) => {
+          const style = getProtocolStyle(entry.protocol);
+          return (
+            <span class="inline-flex items-center gap-1 text-[11px] text-secondary">
+              <span
+                class={joinClasses("inline-flex h-2.5 w-2.5 rounded-full", style.badge)}
+              >
+              </span>
+              {formatProtocolLabel(entry.protocol)} {entry.count}
+            </span>
+          );
+        })
+      ) : (
+        <span class="text-[11px] text-muted">No protocol data yet</span>
+      )
+    }
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    {
+      models.length > 0 ? (
+        models.map((model) => (
+          <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
+            {model}
+          </span>
+        ))
+      ) : (
+        <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
+          Model data pending
+        </span>
+      )
+    }
+  </div>
+</a>

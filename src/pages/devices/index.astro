@@ -1,32 +1,1065 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import DeviceCatalogCard from "../../components/devices/DeviceCatalogCard.astro";
+import DeviceListRow from "../../components/devices/DeviceListRow.astro";
+import EmptyState from "../../components/ui/EmptyState.astro";
+import PageIntro from "../../components/ui/PageIntro.astro";
+import SearchField from "../../components/ui/SearchField.astro";
+import ToggleSwitch from "../../components/ui/ToggleSwitch.astro";
 import { readExportJson } from "../../lib/exports";
+import { getProtocolStyle } from "../../lib/ui";
+
+interface EntityRef {
+  slug: string;
+  name: string;
+}
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  manufacturer: EntityRef | null;
+  model: string | null;
+  category: EntityRef | null;
+  primaryProtocol: string | null;
+  localControl: boolean | null;
+  cloudDependent: boolean | null;
+  requiresHub: boolean | null;
+  matterCertified: boolean | null;
+  compatibleHubSlugs: string[];
+  compatibilityStatuses: string[];
+  updatedAt: string;
+  searchText: string;
+}
 
 interface ProductsExport {
+  count: number;
+  products: ProductSummary[];
+}
+
+interface ProtocolSummary {
+  slug: string;
+  name: string;
+  deviceCount: number;
+}
+
+interface ProtocolsExport {
+  protocols: ProtocolSummary[];
+}
+
+interface ManufacturerSummary {
+  slug: string;
+  name: string;
+  deviceCount: number;
+}
+
+interface ManufacturersExport {
+  manufacturers: ManufacturerSummary[];
+}
+
+interface HubSummary {
+  slug: string;
+  name: string;
+}
+
+interface HubsExport {
+  hubs: HubSummary[];
+}
+
+interface CategoriesExport {
   count: number;
 }
 
 const products = await readExportJson<ProductsExport>("products.json");
+const protocols = await readExportJson<ProtocolsExport>("protocols.json");
+const manufacturers = await readExportJson<ManufacturersExport>(
+  "manufacturers.json",
+);
+const hubs = await readExportJson<HubsExport>("hubs.json");
+const categories = await readExportJson<CategoriesExport>("categories.json");
+
+const manufacturerOptions = [...manufacturers.manufacturers].sort((left, right) =>
+  right.deviceCount === left.deviceCount
+    ? left.name.localeCompare(right.name)
+    : right.deviceCount - left.deviceCount,
+);
+
+const initialProducts = [...products.products].sort((left, right) =>
+  left.name.localeCompare(right.name),
+);
+
+const featureCounts = {
+  localControl: products.products.filter((product) => product.localControl === true)
+    .length,
+  matterCertified: products.products.filter(
+    (product) => product.matterCertified === true,
+  ).length,
+  noCloud: products.products.filter((product) => product.cloudDependent === false)
+    .length,
+  noHub: products.products.filter((product) => product.requiresHub === false).length,
+};
+
+const catalogPayload = {
+  products: products.products.map((product) => ({
+    slug: product.slug,
+    name: product.name,
+    manufacturerSlug: product.manufacturer?.slug ?? null,
+    manufacturerName: product.manufacturer?.name ?? "Unknown manufacturer",
+    model: product.model,
+    categoryName: product.category?.name ?? null,
+    primaryProtocol: product.primaryProtocol,
+    localControl: product.localControl,
+    cloudDependent: product.cloudDependent,
+    requiresHub: product.requiresHub,
+    matterCertified: product.matterCertified,
+    compatibleHubSlugs: product.compatibleHubSlugs,
+    compatibleHubCount: product.compatibleHubSlugs.length,
+    compatibilityStatus: product.compatibilityStatuses[0] ?? null,
+    updatedAt: product.updatedAt,
+    searchText: product.searchText,
+  })),
+  protocols: protocols.protocols.map((protocol) => ({
+    slug: protocol.slug,
+    name: protocol.name,
+    deviceCount: protocol.deviceCount,
+  })),
+  manufacturers: manufacturerOptions,
+  hubs: hubs.hubs,
+};
+
+const formatCount = new Intl.NumberFormat("en-US");
 ---
 
 <BaseLayout
-  title="Devices | SmartPicker"
-  description="Temporary devices landing page for the Astro foundation pass."
+  title="Browse Devices | SmartPicker"
+  description="Browse the SmartPicker device catalog with protocol, manufacturer, and feature filters powered by exported data."
 >
-  <section class="panel mx-auto max-w-3xl p-8">
-    <p
-      class="text-brand-strong text-sm font-semibold tracking-[0.24em] uppercase"
-    >
-      Devices
-    </p>
-    <h1 class="mt-3 text-4xl font-semibold tracking-tight">
-      Catalog route placeholder
-    </h1>
-    <p class="text-muted mt-4 text-base leading-8">
-      The full device catalog is still ahead of us, but this route is live and
-      reading the local export data successfully. Current imported devices: <span
-        class="text-foreground font-semibold">{products.count}</span
-      >.
-    </p>
-  </section>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <PageIntro
+      title="Browse Devices"
+      description="Find compatible smart home devices for your setup. The filters and search below run against the exported device index, so homepage links like `?q=` and `?protocol=` already land in a usable catalog."
+      stats={[
+        { value: formatCount.format(products.count), label: "Devices" },
+        { value: formatCount.format(protocols.protocols.length), label: "Protocols" },
+        { value: formatCount.format(manufacturerOptions.length), label: "Manufacturers" },
+      ]}
+    />
+
+    <div class="grid grid-cols-[260px_1fr] items-start gap-7 py-7 pb-20 max-md:grid-cols-1">
+      <aside class="sticky top-[92px] flex flex-col gap-6 max-md:static">
+        <section class="flex flex-col gap-3.5">
+          <h3 class="text-sm font-semibold text-primary">Protocol</h3>
+          <div class="flex flex-wrap gap-1.5">
+            {
+              protocols.protocols.map((protocol) => {
+                const styles = getProtocolStyle(protocol.slug);
+
+                return (
+                  <button
+                    type="button"
+                    data-protocol-filter={protocol.slug}
+                    data-filter-active="false"
+                    class={`inline-flex items-center gap-1 rounded-full border border-badge px-3 py-1 text-xs font-semibold transition-all hover:-translate-y-px hover:border-theme-hover data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)] ${styles.badge} ${styles.text}`}
+                  >
+                    <span>{protocol.name}</span>
+                    <span class="font-mono text-[10px] opacity-70">
+                      {formatCount.format(protocol.deviceCount)}
+                    </span>
+                  </button>
+                );
+              })
+            }
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-3.5">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-primary">
+            Categories <span class="font-mono text-xs text-muted">{categories.count}</span>
+          </h3>
+          <div class="rounded-2xl border border-theme bg-surface p-4 text-sm text-muted">
+            Category exports are still empty in this snapshot, so the catalog is
+            currently organized by protocol, manufacturer, and feature flags.
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-3.5">
+          <h3 class="text-sm font-semibold text-primary">Features</h3>
+          <div class="flex flex-col gap-2">
+            <button
+              type="button"
+              data-feature-filter="localControl"
+              class="group flex items-center justify-between rounded-[10px] border border-transparent px-3 py-2.5 text-left text-sm text-secondary transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+            >
+              <span>Local control</span>
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-[11px] text-muted">
+                  {featureCounts.localControl}
+                </span>
+                <ToggleSwitch />
+              </div>
+            </button>
+            <button
+              type="button"
+              data-feature-filter="matterCertified"
+              class="group flex items-center justify-between rounded-[10px] border border-transparent px-3 py-2.5 text-left text-sm text-secondary transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+            >
+              <span>Matter certified</span>
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-[11px] text-muted">
+                  {featureCounts.matterCertified}
+                </span>
+                <ToggleSwitch />
+              </div>
+            </button>
+            <button
+              type="button"
+              data-feature-filter="noCloud"
+              class="group flex items-center justify-between rounded-[10px] border border-transparent px-3 py-2.5 text-left text-sm text-secondary transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+            >
+              <span>No cloud required</span>
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-[11px] text-muted">
+                  {featureCounts.noCloud}
+                </span>
+                <ToggleSwitch />
+              </div>
+            </button>
+            <button
+              type="button"
+              data-feature-filter="noHub"
+              class="group flex items-center justify-between rounded-[10px] border border-transparent px-3 py-2.5 text-left text-sm text-secondary transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+            >
+              <span>No hub required</span>
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-[11px] text-muted">
+                  {featureCounts.noHub}
+                </span>
+                <ToggleSwitch />
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <section class="flex flex-col gap-3.5">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-primary">
+            Manufacturers
+            <span class="font-mono text-xs text-muted">{manufacturerOptions.length}</span>
+          </h3>
+          <SearchField
+            id="manufacturer-filter-search"
+            placeholder="Filter manufacturers..."
+            ariaLabel="Filter manufacturers"
+            compact
+          />
+          <div
+            id="manufacturer-filter-list"
+            class="flex max-h-[180px] flex-col overflow-y-auto scrollbar-thin"
+          >
+            {
+              manufacturerOptions.map((manufacturer) => (
+                <button
+                  type="button"
+                  data-manufacturer-filter={manufacturer.slug}
+                  data-filter-active="false"
+                  class="group flex items-center gap-2 rounded-[10px] border border-transparent px-2.5 py-2 text-left text-[13px] text-secondary transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+                >
+                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border border-[var(--sp-border-hover)] text-[10px] text-transparent group-data-[filter-active=true]:border-[var(--sp-blue-500)] group-data-[filter-active=true]:bg-surface group-data-[filter-active=true]:text-[var(--sp-blue-600)]">
+                    ✓
+                  </span>
+                  <span>{manufacturer.name}</span>
+                  <span class="ml-auto font-mono text-[11px] text-muted">
+                    {formatCount.format(manufacturer.deviceCount)}
+                  </span>
+                </button>
+              ))
+            }
+          </div>
+        </section>
+
+        <button
+          type="button"
+          id="clear-catalog-filters"
+          class="rounded-md border border-theme bg-transparent px-4 py-2 text-[13px] font-medium text-muted transition-all hover:border-theme-hover hover:text-secondary"
+        >
+          Clear all filters
+        </button>
+      </aside>
+
+      <section class="min-w-0">
+        <div class="flex flex-wrap items-center gap-3 pb-4">
+          <SearchField
+            id="catalog-search"
+            placeholder="Search within results..."
+            ariaLabel="Search devices within results"
+            class="min-w-[220px] flex-1"
+          />
+
+          <select
+            id="catalog-sort"
+            class="w-full max-w-[190px] cursor-pointer rounded-[10px] border border-theme bg-surface px-3.5 py-3 text-[13px] text-primary outline-none transition-all focus:border-[rgba(37,99,235,0.4)] focus:shadow-[var(--sp-shadow-search)]"
+          >
+            <option value="name-asc">Sort: Name A-Z</option>
+            <option value="name-desc">Sort: Name Z-A</option>
+            <option value="newest">Sort: Newest first</option>
+            <option value="manufacturer">Sort: Manufacturer</option>
+            <option value="compatibility">Sort: Most hubs</option>
+          </select>
+
+          <div class="flex overflow-hidden rounded-[10px] border border-theme">
+            <button
+              type="button"
+              data-view-button="grid"
+              data-filter-active="true"
+              class="flex items-center justify-center bg-surface px-3 py-3 text-muted transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+              title="Grid view"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+              </svg>
+            </button>
+            <button
+              type="button"
+              data-view-button="list"
+              data-filter-active="false"
+              class="flex items-center justify-center bg-surface px-3 py-3 text-muted transition-all hover:bg-hover hover:text-primary data-[filter-active=true]:bg-[var(--sp-blue-bg)] data-[filter-active=true]:text-[var(--sp-blue-600)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]"
+              title="List view"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="active-filters" class="flex flex-wrap gap-1.5 pb-4"></div>
+
+        <div
+          id="grid-view"
+          class="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1"
+        >
+          {
+            initialProducts.map((product) => (
+              <DeviceCatalogCard
+                href={`/devices/${product.slug}`}
+                name={product.name}
+                manufacturerName={product.manufacturer?.name ?? "Unknown manufacturer"}
+                model={product.model}
+                protocolSlug={product.primaryProtocol}
+                compatibilityStatus={product.compatibilityStatuses[0] ?? null}
+                categoryName={product.category?.name ?? null}
+                hubCount={product.compatibleHubSlugs.length}
+              />
+            ))
+          }
+        </div>
+
+        <div id="list-view" class="hidden flex-col gap-0.5 overflow-x-auto">
+          <div class="grid min-w-[720px] grid-cols-[52px_1fr_120px_120px_100px_140px] items-center gap-4 px-4 py-2 text-[11px] font-semibold tracking-wider uppercase text-muted">
+            <span></span>
+            <span>Device</span>
+            <span>Protocol</span>
+            <span>Category</span>
+            <span>Local</span>
+            <span>Hubs</span>
+          </div>
+
+          {
+            initialProducts.map((product) => (
+              <DeviceListRow
+                href={`/devices/${product.slug}`}
+                name={product.name}
+                manufacturerName={product.manufacturer?.name ?? "Unknown manufacturer"}
+                model={product.model}
+                protocolSlug={product.primaryProtocol}
+                categoryName={product.category?.name ?? null}
+                localControl={product.localControl}
+                hubCount={product.compatibleHubSlugs.length}
+              />
+            ))
+          }
+        </div>
+
+        <div id="empty-state" class="hidden">
+          <EmptyState
+            icon="?"
+            title="No matching devices"
+            description="This snapshot is pretty small, so a few filters can narrow it down to zero quickly. Clear a filter or broaden the search and the results will repopulate immediately."
+          >
+            <button
+              type="button"
+              id="empty-state-reset"
+              class="mt-5 rounded-[10px] bg-blue-gradient px-5 py-2.5 text-sm font-semibold text-white transition-all hover:brightness-110 hover:shadow-blue-lg"
+            >
+              Reset filters
+            </button>
+          </EmptyState>
+        </div>
+
+        <div class="mt-5 flex items-center justify-between border-t border-theme py-6">
+          <div id="catalog-summary" class="text-[13px] text-muted">
+            Showing <strong>1-5</strong> of <strong>{products.count}</strong>
+            results
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="rounded-md border border-blue bg-blue-subtle px-3 py-2 text-[13px] font-medium text-blue">
+              1
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script id="devices-catalog-data" type="application/json">
+    {JSON.stringify(catalogPayload)}
+  </script>
+
+  <script is:inline>
+    (() => {
+      const dataElement = document.getElementById("devices-catalog-data");
+
+      if (!dataElement?.textContent) {
+        return;
+      }
+
+      const payload = JSON.parse(dataElement.textContent);
+      const state = {
+        q: "",
+        protocols: new Set(),
+        manufacturers: new Set(),
+        features: {
+          localControl: false,
+          matterCertified: false,
+          noCloud: false,
+          noHub: false,
+        },
+        hubs: new Set(),
+        sort: "name-asc",
+        view: "grid",
+      };
+
+      const protocolNames = Object.fromEntries(
+        payload.protocols.map((protocol) => [protocol.slug, protocol.name]),
+      );
+      const manufacturerNames = Object.fromEntries(
+        payload.manufacturers.map((manufacturer) => [
+          manufacturer.slug,
+          manufacturer.name,
+        ]),
+      );
+      const hubNames = Object.fromEntries(
+        payload.hubs.map((hub) => [hub.slug, hub.name]),
+      );
+      const protocolStyles = {
+        zigbee: { badge: "bg-zigbee", text: "text-zigbee", shortLabel: "ZG" },
+        zwave: { badge: "bg-zwave", text: "text-zwave", shortLabel: "ZW" },
+        matter: { badge: "bg-matter", text: "text-matter", shortLabel: "MT" },
+        wifi: { badge: "bg-wifi", text: "text-wifi", shortLabel: "WF" },
+        thread: { badge: "bg-thread", text: "text-thread", shortLabel: "TH" },
+        bluetooth: {
+          badge: "bg-bluetooth",
+          text: "text-bluetooth",
+          shortLabel: "BT",
+        },
+      };
+
+      const searchInput = document.getElementById("catalog-search");
+      const sortSelect = document.getElementById("catalog-sort");
+      const gridView = document.getElementById("grid-view");
+      const listView = document.getElementById("list-view");
+      const activeFilters = document.getElementById("active-filters");
+      const summary = document.getElementById("catalog-summary");
+      const emptyState = document.getElementById("empty-state");
+      const clearButton = document.getElementById("clear-catalog-filters");
+      const emptyStateReset = document.getElementById("empty-state-reset");
+      const manufacturerSearch = document.getElementById(
+        "manufacturer-filter-search",
+      );
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function formatProtocolLabel(value) {
+        if (!value) {
+          return "Unknown";
+        }
+
+        if (value === "wifi") {
+          return "Wi-Fi";
+        }
+
+        if (value === "zwave") {
+          return "Z-Wave";
+        }
+
+        return value.charAt(0).toUpperCase() + value.slice(1);
+      }
+
+      function formatStatusLabel(value) {
+        if (!value) {
+          return "Reported";
+        }
+
+        const labels = {
+          verified: "Verified",
+          supported: "Supported",
+          reported: "Reported",
+          untested: "Untested",
+          unsupported: "Unsupported",
+        };
+
+        return labels[value] ?? value.charAt(0).toUpperCase() + value.slice(1);
+      }
+
+      function statusClassName(value) {
+        const styles = {
+          verified: "bg-green-subtle text-green",
+          supported: "bg-green-subtle text-green",
+          reported: "bg-amber-subtle text-amber",
+          untested: "bg-untested text-muted",
+          unsupported: "bg-red-subtle text-red",
+        };
+
+        return styles[value] ?? "bg-badge text-secondary";
+      }
+
+      function formatCount(value) {
+        return new Intl.NumberFormat("en-US").format(value);
+      }
+
+      function protocolStyle(slug) {
+        return (
+          protocolStyles[slug ?? ""] ?? {
+            badge: "bg-badge",
+            text: "text-secondary",
+            shortLabel: "SP",
+          }
+        );
+      }
+
+      function parseMultiValue(params, key) {
+        return new Set(
+          params
+            .getAll(key)
+            .flatMap((value) => value.split(","))
+            .map((value) => value.trim())
+            .filter(Boolean),
+        );
+      }
+
+      function readStateFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        state.q = params.get("q") ?? "";
+        state.protocols = parseMultiValue(params, "protocol");
+        state.manufacturers = parseMultiValue(params, "manufacturer");
+        state.hubs = parseMultiValue(params, "hub");
+        state.features.localControl = params.get("local") === "1";
+        state.features.matterCertified = params.get("matter") === "1";
+        state.features.noCloud = params.get("noCloud") === "1";
+        state.features.noHub = params.get("noHub") === "1";
+
+        const sort = params.get("sort");
+        state.sort = [
+          "name-asc",
+          "name-desc",
+          "newest",
+          "manufacturer",
+          "compatibility",
+        ].includes(sort)
+          ? sort
+          : "name-asc";
+
+        state.view = params.get("view") === "list" ? "list" : "grid";
+      }
+
+      function writeStateToUrl() {
+        const params = new URLSearchParams();
+
+        if (state.q) {
+          params.set("q", state.q);
+        }
+
+        [...state.protocols].sort().forEach((value) => {
+          params.append("protocol", value);
+        });
+        [...state.manufacturers].sort().forEach((value) => {
+          params.append("manufacturer", value);
+        });
+        [...state.hubs].sort().forEach((value) => {
+          params.append("hub", value);
+        });
+
+        if (state.features.localControl) {
+          params.set("local", "1");
+        }
+        if (state.features.matterCertified) {
+          params.set("matter", "1");
+        }
+        if (state.features.noCloud) {
+          params.set("noCloud", "1");
+        }
+        if (state.features.noHub) {
+          params.set("noHub", "1");
+        }
+        if (state.sort !== "name-asc") {
+          params.set("sort", state.sort);
+        }
+        if (state.view !== "grid") {
+          params.set("view", state.view);
+        }
+
+        const query = params.toString();
+        const nextUrl = query ? `?${query}` : window.location.pathname;
+        window.history.replaceState({}, "", nextUrl);
+      }
+
+      function syncControls() {
+        if (searchInput) {
+          searchInput.value = state.q;
+        }
+        if (sortSelect) {
+          sortSelect.value = state.sort;
+        }
+
+        document.querySelectorAll("[data-protocol-filter]").forEach((button) => {
+          button.dataset.filterActive = state.protocols.has(
+            button.dataset.protocolFilter,
+          )
+            ? "true"
+            : "false";
+        });
+
+        document
+          .querySelectorAll("[data-manufacturer-filter]")
+          .forEach((button) => {
+            button.dataset.filterActive = state.manufacturers.has(
+              button.dataset.manufacturerFilter,
+            )
+              ? "true"
+              : "false";
+          });
+
+        document.querySelectorAll("[data-feature-filter]").forEach((button) => {
+          const isActive = state.features[button.dataset.featureFilter] === true;
+          button.dataset.filterActive = isActive ? "true" : "false";
+        });
+
+        document.querySelectorAll("[data-view-button]").forEach((button) => {
+          button.dataset.filterActive =
+            button.dataset.viewButton === state.view ? "true" : "false";
+        });
+
+        if (gridView && listView) {
+          gridView.classList.toggle("hidden", state.view !== "grid");
+          gridView.classList.toggle("grid", state.view === "grid");
+          listView.classList.toggle("hidden", state.view !== "list");
+          listView.classList.toggle("flex", state.view === "list");
+        }
+      }
+
+      function filteredProducts() {
+        const query = state.q.trim().toLowerCase();
+
+        return payload.products
+          .filter((product) => {
+            if (query && !product.searchText.toLowerCase().includes(query)) {
+              return false;
+            }
+
+            if (
+              state.protocols.size > 0 &&
+              !state.protocols.has(product.primaryProtocol ?? "")
+            ) {
+              return false;
+            }
+
+            if (
+              state.manufacturers.size > 0 &&
+              !state.manufacturers.has(product.manufacturerSlug ?? "")
+            ) {
+              return false;
+            }
+
+            if (
+              state.hubs.size > 0 &&
+              !product.compatibleHubSlugs.some((hub) => state.hubs.has(hub))
+            ) {
+              return false;
+            }
+
+            if (state.features.localControl && product.localControl !== true) {
+              return false;
+            }
+            if (
+              state.features.matterCertified &&
+              product.matterCertified !== true
+            ) {
+              return false;
+            }
+            if (state.features.noCloud && product.cloudDependent !== false) {
+              return false;
+            }
+            if (state.features.noHub && product.requiresHub !== false) {
+              return false;
+            }
+
+            return true;
+          })
+          .sort((left, right) => {
+            if (state.sort === "name-desc") {
+              return right.name.localeCompare(left.name);
+            }
+
+            if (state.sort === "newest") {
+              return (
+                new Date(right.updatedAt).getTime() -
+                new Date(left.updatedAt).getTime()
+              );
+            }
+
+            if (state.sort === "manufacturer") {
+              const byManufacturer = left.manufacturerName.localeCompare(
+                right.manufacturerName,
+              );
+
+              if (byManufacturer !== 0) {
+                return byManufacturer;
+              }
+
+              return left.name.localeCompare(right.name);
+            }
+
+            if (state.sort === "compatibility") {
+              const byCompatibility =
+                right.compatibleHubCount - left.compatibleHubCount;
+
+              if (byCompatibility !== 0) {
+                return byCompatibility;
+              }
+
+              return left.name.localeCompare(right.name);
+            }
+
+            return left.name.localeCompare(right.name);
+          });
+      }
+
+      function renderActiveFilters() {
+        const chips = [];
+
+        [...state.protocols].sort().forEach((slug) => {
+          chips.push({
+            label: protocolNames[slug] ?? slug,
+            kind: "protocol",
+            value: slug,
+          });
+        });
+
+        [...state.manufacturers].sort().forEach((slug) => {
+          chips.push({
+            label: manufacturerNames[slug] ?? slug,
+            kind: "manufacturer",
+            value: slug,
+          });
+        });
+
+        [...state.hubs].sort().forEach((slug) => {
+          chips.push({
+            label: hubNames[slug] ?? slug,
+            kind: "hub",
+            value: slug,
+          });
+        });
+
+        [
+          ["localControl", "Local control"],
+          ["matterCertified", "Matter certified"],
+          ["noCloud", "No cloud required"],
+          ["noHub", "No hub required"],
+        ].forEach(([key, label]) => {
+          if (state.features[key]) {
+            chips.push({ label, kind: "feature", value: key });
+          }
+        });
+
+        if (state.q) {
+          chips.unshift({
+            label: `Search: ${state.q}`,
+            kind: "search",
+            value: "q",
+          });
+        }
+
+        activeFilters.innerHTML = chips
+          .map(
+            (chip) => `
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-full border border-blue bg-blue-subtle px-2.5 py-1 text-xs font-medium text-blue"
+                data-active-chip-kind="${escapeHtml(chip.kind)}"
+                data-active-chip-value="${escapeHtml(chip.value)}"
+              >
+                ${escapeHtml(chip.label)}
+                <span class="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[10px]">✕</span>
+              </button>
+            `,
+          )
+          .join("");
+      }
+
+      function renderGrid(productsToRender) {
+        gridView.innerHTML = productsToRender
+          .map((product) => {
+            const styles = protocolStyle(product.primaryProtocol);
+            const categoryBadge = product.categoryName
+              ? `<span class="rounded-md border border-badge bg-badge px-2 py-0.5 text-[11px] font-medium text-secondary">${escapeHtml(product.categoryName)}</span>`
+              : "";
+
+            return `
+              <a href="/devices/${escapeHtml(product.slug)}" class="card-hover flex flex-col rounded-2xl border border-theme bg-surface p-5 text-primary">
+                <div class="mb-3.5 flex items-start justify-between gap-3">
+                  <div class="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[10px] bg-elevated text-sm font-semibold text-muted">${escapeHtml(styles.shortLabel)}</div>
+                  <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${styles.badge} ${styles.text}">${escapeHtml(formatProtocolLabel(product.primaryProtocol))}</span>
+                </div>
+                <div class="mb-0.5 text-[15px] leading-tight font-semibold">${escapeHtml(product.name)}</div>
+                <div class="mb-3 text-[13px] text-muted">${escapeHtml(product.manufacturerName)} · ${escapeHtml(product.model ?? "Model TBD")}</div>
+                <div class="mt-auto flex flex-wrap gap-1.5">
+                  <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${statusClassName(product.compatibilityStatus)}">${escapeHtml(formatStatusLabel(product.compatibilityStatus))}</span>
+                  ${categoryBadge}
+                </div>
+                <div class="mt-2.5 flex items-center gap-1 border-t border-theme pt-2.5">
+                  <span class="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-green-subtle text-[9px] font-bold text-green">✓</span>
+                  <span class="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-green-subtle text-[9px] font-bold text-green">${escapeHtml(product.compatibleHubCount)}</span>
+                  <span class="ml-auto text-[11px] text-muted">${escapeHtml(product.compatibleHubCount)} hub${product.compatibleHubCount === 1 ? "" : "s"}</span>
+                </div>
+              </a>
+            `;
+          })
+          .join("");
+      }
+
+      function renderList(productsToRender) {
+        const header = `
+          <div class="grid min-w-[720px] grid-cols-[52px_1fr_120px_120px_100px_140px] items-center gap-4 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <span></span>
+            <span>Device</span>
+            <span>Protocol</span>
+            <span>Category</span>
+            <span>Local</span>
+            <span>Hubs</span>
+          </div>
+        `;
+
+        const rows = productsToRender
+          .map((product) => {
+            const styles = protocolStyle(product.primaryProtocol);
+            const localLabel =
+              product.localControl === true
+                ? "Yes"
+                : product.localControl === false
+                  ? "No"
+                  : "Unknown";
+
+            return `
+              <a href="/devices/${escapeHtml(product.slug)}" class="grid min-w-[720px] grid-cols-[52px_1fr_120px_120px_100px_140px] items-center gap-4 rounded-[10px] border border-transparent bg-surface px-4 py-3 text-primary transition-all hover:border-theme-hover hover:shadow-card">
+                <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-elevated text-sm font-semibold text-muted">${escapeHtml(styles.shortLabel)}</div>
+                <div class="min-w-0">
+                  <div class="overflow-hidden text-ellipsis whitespace-nowrap text-sm font-semibold">${escapeHtml(product.name)}</div>
+                  <div class="text-xs text-muted">${escapeHtml(product.manufacturerName)} · ${escapeHtml(product.model ?? "Model TBD")}</div>
+                </div>
+                <span class="inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${styles.badge} ${styles.text}">${escapeHtml(formatProtocolLabel(product.primaryProtocol))}</span>
+                <span class="text-[13px] text-secondary">${escapeHtml(product.categoryName ?? "Uncategorized")}</span>
+                <span class="text-xs font-medium text-secondary">${escapeHtml(localLabel)}</span>
+                <div class="flex items-center gap-0.5">
+                  <span class="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-green-subtle text-[9px] font-bold text-green">${escapeHtml(product.compatibleHubCount)}</span>
+                  <span class="ml-auto text-[11px] text-muted">${escapeHtml(product.compatibleHubCount)}</span>
+                </div>
+              </a>
+            `;
+          })
+          .join("");
+
+        listView.innerHTML = header + rows;
+      }
+
+      function updateSummary(count) {
+        if (!summary) {
+          return;
+        }
+
+        if (count === 0) {
+          summary.innerHTML = "Showing <strong>0</strong> of <strong>0</strong> results";
+          return;
+        }
+
+        summary.innerHTML = `Showing <strong>1-${formatCount(count)}</strong> of <strong>${formatCount(count)}</strong> results`;
+      }
+
+      function render() {
+        syncControls();
+        const matches = filteredProducts();
+
+        renderActiveFilters();
+        renderGrid(matches);
+        renderList(matches);
+        updateSummary(matches.length);
+
+        const hasResults = matches.length > 0;
+        gridView.classList.toggle("hidden", !hasResults || state.view !== "grid");
+        listView.classList.toggle("hidden", !hasResults || state.view !== "list");
+        emptyState.classList.toggle("hidden", hasResults);
+
+        writeStateToUrl();
+      }
+
+      function clearAll() {
+        state.q = "";
+        state.protocols = new Set();
+        state.manufacturers = new Set();
+        state.hubs = new Set();
+        state.features.localControl = false;
+        state.features.matterCertified = false;
+        state.features.noCloud = false;
+        state.features.noHub = false;
+        state.sort = "name-asc";
+        state.view = "grid";
+
+        if (manufacturerSearch) {
+          manufacturerSearch.value = "";
+          filterManufacturerList("");
+        }
+
+        render();
+      }
+
+      function filterManufacturerList(query) {
+        const normalized = query.trim().toLowerCase();
+
+        document
+          .querySelectorAll("[data-manufacturer-filter]")
+          .forEach((button) => {
+            const visible = button.textContent.toLowerCase().includes(normalized);
+            button.classList.toggle("hidden", !visible);
+          });
+      }
+
+      document.querySelectorAll("[data-protocol-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const slug = button.dataset.protocolFilter;
+
+          if (state.protocols.has(slug)) {
+            state.protocols.delete(slug);
+          } else {
+            state.protocols.add(slug);
+          }
+
+          render();
+        });
+      });
+
+      document.querySelectorAll("[data-manufacturer-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const slug = button.dataset.manufacturerFilter;
+
+          if (state.manufacturers.has(slug)) {
+            state.manufacturers.delete(slug);
+          } else {
+            state.manufacturers.add(slug);
+          }
+
+          render();
+        });
+      });
+
+      document.querySelectorAll("[data-feature-filter]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.featureFilter;
+          state.features[key] = !state.features[key];
+          render();
+        });
+      });
+
+      document.querySelectorAll("[data-view-button]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.view = button.dataset.viewButton;
+          render();
+        });
+      });
+
+      searchInput?.addEventListener("input", (event) => {
+        state.q = event.currentTarget.value;
+        render();
+      });
+
+      sortSelect?.addEventListener("change", (event) => {
+        state.sort = event.currentTarget.value;
+        render();
+      });
+
+      manufacturerSearch?.addEventListener("input", (event) => {
+        filterManufacturerList(event.currentTarget.value);
+      });
+
+      clearButton?.addEventListener("click", clearAll);
+      emptyStateReset?.addEventListener("click", clearAll);
+
+      activeFilters?.addEventListener("click", (event) => {
+        const chip = event.target.closest("[data-active-chip-kind]");
+
+        if (!chip) {
+          return;
+        }
+
+        const kind = chip.dataset.activeChipKind;
+        const value = chip.dataset.activeChipValue;
+
+        if (kind === "search") {
+          state.q = "";
+        } else if (kind === "protocol") {
+          state.protocols.delete(value);
+        } else if (kind === "manufacturer") {
+          state.manufacturers.delete(value);
+        } else if (kind === "hub") {
+          state.hubs.delete(value);
+        } else if (kind === "feature") {
+          state.features[value] = false;
+        }
+
+        render();
+      });
+
+      window.addEventListener("popstate", () => {
+        readStateFromUrl();
+        render();
+      });
+
+      readStateFromUrl();
+      if (manufacturerSearch) {
+        filterManufacturerList("");
+      }
+      render();
+    })();
+  </script>
 </BaseLayout>
