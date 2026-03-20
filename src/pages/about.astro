@@ -5,6 +5,7 @@ import PageIntro from "../components/ui/PageIntro.astro";
 import SectionHeader from "../components/ui/SectionHeader.astro";
 import StatGrid from "../components/ui/StatGrid.astro";
 import { readExportJson } from "../lib/exports";
+import { getSitemapEntries } from "../lib/sitemap";
 import { formatProtocolLabel } from "../lib/ui";
 
 interface SiteExport {
@@ -19,17 +20,8 @@ interface SiteExport {
   protocolCounts: Record<string, number>;
 }
 
-interface SitemapExport {
-  count: number;
-  urls: {
-    path: string;
-    type: string;
-    lastModified: string;
-  }[];
-}
-
 const site = await readExportJson<SiteExport>("site.json");
-const sitemap = await readExportJson<SitemapExport>("sitemap.json");
+const sitemapEntries = await getSitemapEntries();
 
 const formatCount = new Intl.NumberFormat("en-US");
 const generatedLabel = new Date(site.generated).toLocaleString("en-US", {
@@ -84,7 +76,7 @@ const dataSources = [
       description="SmartPicker helps you compare devices, hubs, manufacturers, and wireless standards before you buy, so you can build a setup that fits your home and your expectations."
       descriptionClass="max-w-[680px] text-lg"
     >
-      <p class="mt-4 max-w-[760px] text-sm leading-relaxed text-muted">
+      <p class="text-muted mt-4 max-w-[760px] text-sm leading-relaxed">
         Catalog data was last refreshed {generatedLabel}.
       </p>
     </PageIntro>
@@ -95,21 +87,30 @@ const dataSources = [
         columnsClass="grid-cols-4 max-md:grid-cols-2"
         items={[
           { value: formatCount.format(site.stats.devices), label: "Devices" },
-          { value: formatCount.format(site.stats.manufacturers), label: "Manufacturers" },
-          { value: formatCount.format(site.stats.protocols), label: "Protocols" },
-          { value: formatCount.format(sitemap.count), label: "Catalog pages" },
+          {
+            value: formatCount.format(site.stats.manufacturers),
+            label: "Manufacturers",
+          },
+          {
+            value: formatCount.format(site.stats.protocols),
+            label: "Protocols",
+          },
+          {
+            value: formatCount.format(sitemapEntries.length),
+            label: "Catalog pages",
+          },
         ]}
       />
     </div>
 
     <section class="animate-fade-in">
       <SectionHeader class="mt-12" title="Why SmartPicker" />
-      <p class="mb-4 text-base leading-relaxed text-secondary">
+      <p class="text-secondary mb-4 text-base leading-relaxed">
         Building a smart home often means comparing product pages, integration
         lists, and community discussions just to answer a simple question: will
         this device work with the rest of my setup?
       </p>
-      <p class="text-base leading-relaxed text-secondary">
+      <p class="text-secondary text-base leading-relaxed">
         SmartPicker brings those decisions into one place. The goal is to make
         compatibility easier to understand, easier to compare, and easier to
         trust when you are choosing devices, hubs, or an entire ecosystem.
@@ -117,32 +118,38 @@ const dataSources = [
     </section>
 
     <div class="my-7 mb-10 grid grid-cols-3 gap-3 max-md:grid-cols-1">
-      <div class="rounded-2xl border border-theme bg-surface px-5 py-6">
-        <div class="mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border border-blue bg-blue-subtle font-mono text-[13px] font-bold text-blue">
+      <div class="border-theme bg-surface rounded-2xl border px-5 py-6">
+        <div
+          class="border-blue bg-blue-subtle text-blue mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[13px] font-bold"
+        >
           1
         </div>
         <div class="mb-1.5 text-[15px] font-bold">Compare devices</div>
-        <div class="text-[13px] leading-relaxed text-secondary">
+        <div class="text-secondary text-[13px] leading-relaxed">
           Review protocol support, hub compatibility, and key product traits in
           one place instead of stitching details together from multiple tabs.
         </div>
       </div>
-      <div class="rounded-2xl border border-theme bg-surface px-5 py-6">
-        <div class="mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border border-blue bg-blue-subtle font-mono text-[13px] font-bold text-blue">
+      <div class="border-theme bg-surface rounded-2xl border px-5 py-6">
+        <div
+          class="border-blue bg-blue-subtle text-blue mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[13px] font-bold"
+        >
           2
         </div>
         <div class="mb-1.5 text-[15px] font-bold">Understand protocols</div>
-        <div class="text-[13px] leading-relaxed text-secondary">
+        <div class="text-secondary text-[13px] leading-relaxed">
           See which standards are widely supported, which brands use them, and
           which hubs are most relevant for your preferred ecosystem.
         </div>
       </div>
-      <div class="rounded-2xl border border-theme bg-surface px-5 py-6">
-        <div class="mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border border-blue bg-blue-subtle font-mono text-[13px] font-bold text-blue">
+      <div class="border-theme bg-surface rounded-2xl border px-5 py-6">
+        <div
+          class="border-blue bg-blue-subtle text-blue mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[13px] font-bold"
+        >
           3
         </div>
         <div class="mb-1.5 text-[15px] font-bold">Choose with confidence</div>
-        <div class="text-[13px] leading-relaxed text-secondary">
+        <div class="text-secondary text-[13px] leading-relaxed">
           SmartPicker is designed to show coverage clearly, so you can make
           better decisions about reliability, local control, and platform fit.
         </div>
@@ -151,7 +158,7 @@ const dataSources = [
 
     <section class="animate-fade-in">
       <SectionHeader class="mt-12" title="Data sources" />
-      <p class="mb-4 text-base leading-relaxed text-secondary">
+      <p class="text-secondary mb-4 text-base leading-relaxed">
         SmartPicker is informed by established smart home data sources and
         community knowledge from the ecosystems people already rely on.
       </p>
@@ -161,7 +168,7 @@ const dataSources = [
       {
         dataSources.map((source, index) => (
           <article
-            class="flex items-center gap-[18px] rounded-2xl border border-theme bg-surface px-6 py-5 transition-colors hover:border-theme-hover"
+            class="border-theme bg-surface hover:border-theme-hover flex items-center gap-[18px] rounded-2xl border px-6 py-5 transition-colors"
             style={`animation-delay:${0.3 + index * 0.05}s`}
           >
             <div
@@ -171,20 +178,26 @@ const dataSources = [
             </div>
             <div class="min-w-0 flex-1">
               <div class="mb-0.5 text-[15px] font-bold">{source.name}</div>
-              <div class="text-[13px] leading-relaxed text-secondary">
+              <div class="text-secondary text-[13px] leading-relaxed">
                 {source.description}
               </div>
-              <div class="mt-1 text-xs font-mono text-muted">{source.detail}</div>
+              <div class="text-muted mt-1 font-mono text-xs">
+                {source.detail}
+              </div>
             </div>
           </article>
         ))
       }
     </div>
 
-    <blockquote class="my-6 rounded-r-[10px] border-l-[3px] border-[var(--sp-blue-400)] bg-blockquote px-6 py-5">
-      <p class="text-base leading-relaxed text-secondary">
+    <blockquote
+      class="bg-blockquote my-6 rounded-r-[10px] border-l-[3px] border-[var(--sp-blue-400)] px-6 py-5"
+    >
+      <p class="text-secondary text-base leading-relaxed">
         SmartPicker would rather show limited coverage clearly than overstate
-        support. Today, active device coverage is strongest in {activeProtocolLabel}.
+        support. Today, active device coverage is strongest in {
+          activeProtocolLabel
+        }.
       </p>
     </blockquote>
 
@@ -193,50 +206,67 @@ const dataSources = [
     </section>
 
     <div class="my-7 mb-10 grid grid-cols-2 gap-3 max-md:grid-cols-1">
-      <article class="rounded-2xl border border-theme bg-surface p-6">
-        <h3 class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-green bg-green-subtle text-[13px] text-green">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
+        <h3
+          class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <span
+            class="border-green bg-green-subtle text-green inline-flex h-6 w-6 items-center justify-center rounded-md border text-[13px]"
+          >
             ✓
           </span>
           Clear coverage
         </h3>
-        <p class="text-base leading-relaxed text-secondary">
+        <p class="text-secondary text-base leading-relaxed">
           Device, hub, and protocol pages are designed to make support levels
           easy to scan, compare, and understand quickly.
         </p>
       </article>
-      <article class="rounded-2xl border border-theme bg-surface p-6">
-        <h3 class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-amber bg-amber-subtle text-[13px] text-amber">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
+        <h3
+          class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <span
+            class="border-amber bg-amber-subtle text-amber inline-flex h-6 w-6 items-center justify-center rounded-md border text-[13px]"
+          >
             ⚡
           </span>
           Local-first thinking
         </h3>
-        <p class="text-base leading-relaxed text-secondary">
-          Local control and hub requirements matter because long-term reliability
-          matters. SmartPicker keeps those signals visible during comparison.
+        <p class="text-secondary text-base leading-relaxed">
+          Local control and hub requirements matter because long-term
+          reliability matters. SmartPicker keeps those signals visible during
+          comparison.
         </p>
       </article>
-      <article class="rounded-2xl border border-theme bg-surface p-6">
-        <h3 class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-purple bg-purple-subtle text-[13px] text-purple">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
+        <h3
+          class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <span
+            class="border-purple bg-purple-subtle text-purple inline-flex h-6 w-6 items-center justify-center rounded-md border text-[13px]"
+          >
             ↗
           </span>
           Practical organization
         </h3>
-        <p class="text-base leading-relaxed text-secondary">
+        <p class="text-secondary text-base leading-relaxed">
           Browse by product, brand, hub, or protocol depending on how you shop
           and how you think about your smart home.
         </p>
       </article>
-      <article class="rounded-2xl border border-theme bg-surface p-6">
-        <h3 class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan bg-cyan-subtle text-[13px] text-cyan">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
+        <h3
+          class="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <span
+            class="border-cyan bg-cyan-subtle text-cyan inline-flex h-6 w-6 items-center justify-center rounded-md border text-[13px]"
+          >
             ⌁
           </span>
           Fast comparison
         </h3>
-        <p class="text-base leading-relaxed text-secondary">
+        <p class="text-secondary text-base leading-relaxed">
           The site is built to reduce research time when you are comparing
           several devices, platforms, or manufacturers at once.
         </p>
@@ -245,49 +275,52 @@ const dataSources = [
 
     <section class="animate-fade-in">
       <SectionHeader class="mt-12" title="Current coverage" />
-      <p class="text-base leading-relaxed text-secondary">
+      <p class="text-secondary text-base leading-relaxed">
         SmartPicker currently covers {formatCount.format(site.stats.devices)}
         devices across {formatCount.format(site.stats.manufacturers)}
         {" "}manufacturers and {formatCount.format(site.stats.protocols)} protocol
-        families, with {formatCount.format(sitemap.count)} pages available for
-        browsing and comparison.
+        families, with {formatCount.format(sitemapEntries.length)} pages available
+        for browsing and comparison.
       </p>
     </section>
 
     <div class="my-7 mb-12 grid grid-cols-3 gap-3 max-md:grid-cols-1">
-      <article class="rounded-2xl border border-theme bg-surface p-6">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
         <h3 class="text-base font-bold tracking-tight">Devices</h3>
-        <p class="mt-2 text-sm leading-relaxed text-secondary">
+        <p class="text-secondary mt-2 text-sm leading-relaxed">
           Review product pages for protocol, control method, hub compatibility,
           and model-level detail.
         </p>
       </article>
-      <article class="rounded-2xl border border-theme bg-surface p-6">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
         <h3 class="text-base font-bold tracking-tight">Hubs and platforms</h3>
-        <p class="mt-2 text-sm leading-relaxed text-secondary">
+        <p class="text-secondary mt-2 text-sm leading-relaxed">
           Compare controllers by supported protocols, connected devices, and
           overall coverage across the catalog.
         </p>
       </article>
-      <article class="rounded-2xl border border-theme bg-surface p-6">
+      <article class="border-theme bg-surface rounded-2xl border p-6">
         <h3 class="text-base font-bold tracking-tight">Brands and protocols</h3>
-        <p class="mt-2 text-sm leading-relaxed text-secondary">
+        <p class="text-secondary mt-2 text-sm leading-relaxed">
           Understand how manufacturers and wireless standards fit into the
           broader smart home landscape before committing to a direction.
         </p>
       </article>
     </div>
 
-    <div class="my-12 rounded-2xl border border-theme bg-hero-gradient px-8 py-9 text-center">
+    <div
+      class="border-theme bg-hero-gradient my-12 rounded-2xl border px-8 py-9 text-center"
+    >
       <h2 class="text-[22px] font-bold tracking-tight">Start exploring</h2>
-      <p class="mx-auto mt-3 max-w-[760px] text-base leading-relaxed text-secondary">
+      <p
+        class="text-secondary mx-auto mt-3 max-w-[760px] text-base leading-relaxed"
+      >
         Whether you are evaluating a single device or narrowing down an entire
-        platform, SmartPicker gives you a faster path to the details that matter.
+        platform, SmartPicker gives you a faster path to the details that
+        matter.
       </p>
       <div class="mt-5 flex flex-wrap justify-center gap-3">
-        <ButtonLink href="/devices">
-          Browse devices
-        </ButtonLink>
+        <ButtonLink href="/devices"> Browse devices </ButtonLink>
         <ButtonLink href="/protocols" variant="secondary">
           Explore protocols
         </ButtonLink>
@@ -296,11 +329,11 @@ const dataSources = [
 
     <section class="animate-fade-in pb-16">
       <SectionHeader class="mt-12" title="Who SmartPicker is for" />
-      <p class="text-base leading-relaxed text-secondary">
+      <p class="text-secondary text-base leading-relaxed">
         SmartPicker is useful for homeowners, installers, and enthusiasts who
         want to make better buying decisions with less guesswork.
       </p>
-      <p class="mt-4 text-base leading-relaxed text-secondary">
+      <p class="text-secondary mt-4 text-base leading-relaxed">
         If you care about compatibility, local control, or long-term platform
         flexibility, the catalog is designed to help you compare options without
         digging through scattered sources first.

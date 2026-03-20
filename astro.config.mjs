@@ -10,12 +10,10 @@ import node from "@astrojs/node";
 
 import partytown from "@astrojs/partytown";
 
-import sitemap from "@astrojs/sitemap";
-
 // https://astro.build/config
 export default defineConfig({
   site: process.env.PUBLIC_SITE_URL || "https://smartpicker.io",
-  integrations: [react(), partytown(), sitemap()],
+  integrations: [react(), partytown()],
   vite: {
     plugins: [tailwindcss()],
   },
