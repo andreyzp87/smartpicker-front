@@ -1,4 +1,5 @@
 ---
+import DeviceCatalogBrowser from "../../components/devices/DeviceCatalogBrowser";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ManufacturerProtocolCard from "../../components/manufacturers/ManufacturerProtocolCard.astro";
 import ButtonLink from "../../components/ui/ButtonLink.astro";
@@ -8,8 +9,10 @@ import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
 import SidebarPanel from "../../components/ui/SidebarPanel.astro";
 import StatGrid from "../../components/ui/StatGrid.astro";
+import { createDefaultCatalogState, getCatalogResults } from "../../lib/catalog/core";
+import { getCatalogPayload } from "../../lib/catalog/server";
 import { readExportJson } from "../../lib/exports";
-import { formatProtocolLabel, getProtocolStyle, sentenceCase } from "../../lib/ui";
+import { formatProtocolLabel, getProtocolStyle } from "../../lib/ui";
 
 interface EntityRef {
   id: number;
@@ -91,6 +94,7 @@ const hubs = await readExportJson<HubsExport>("hubs.json");
 const manufacturers = await readExportJson<ManufacturersExport>(
   "manufacturers.json",
 );
+const catalogPayload = await getCatalogPayload();
 
 const manufacturer = detail.manufacturer;
 const mappedProducts = products.products
@@ -186,14 +190,25 @@ const updatedLabel = manufacturer.updatedAt
       dateStyle: "medium",
     })
   : "Unknown";
-const exportGenerated = new Date(detail.generated).toLocaleString("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 const summaryText =
   protocolBreakdown.length > 0
     ? `${manufacturer.name} currently contributes ${manufacturer.deviceCount} published devices across ${protocolBreakdown.length} protocol ${protocolBreakdown.length === 1 ? "family" : "families"} in the SmartPicker export snapshot.`
     : `${manufacturer.name} is included in the SmartPicker export snapshot with ${manufacturer.deviceCount} published devices.`;
+const featureCounts = Object.fromEntries(
+  catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
+) as {
+  localControl: number;
+  matterCertified: number;
+  noCloud: number;
+  noHub: number;
+};
+const initialCatalog = getCatalogResults(
+  catalogPayload,
+  createDefaultCatalogState(),
+  "",
+  { manufacturers: [manufacturer.slug] },
+  12,
+);
 ---
 
 <BaseLayout
@@ -552,5 +567,34 @@ const summaryText =
         </ButtonLink>
       </aside>
     </div>
+
+    <section class="mt-12 border-t border-theme py-12">
+      <SectionHeader
+        eyebrow="Catalog"
+        title={`Browse ${manufacturer.name} devices`}
+        description="This interactive catalog uses the same client-side filtering engine as the main devices page, scoped to the current manufacturer."
+      />
+
+      <DeviceCatalogBrowser
+        client:load
+        catalogEndpoint="/catalog.json"
+        pageSize={12}
+        autoloadMode="scroll"
+        protocols={catalogPayload.facets.protocols}
+        manufacturers={catalogPayload.facets.manufacturers}
+        categoryCount={catalogPayload.facets.categories.length}
+        featureCounts={featureCounts}
+        hiddenSections={{ manufacturers: true }}
+        lockedFilters={{ manufacturers: [manufacturer.slug] }}
+        initialRender={{
+          products: initialCatalog.pagedProducts,
+          totalCount: initialCatalog.filteredProducts.length,
+          totalPages: initialCatalog.totalPages,
+          page: initialCatalog.safePage,
+          from: initialCatalog.from,
+          to: initialCatalog.to,
+        }}
+      />
+    </section>
   </div>
 </BaseLayout>

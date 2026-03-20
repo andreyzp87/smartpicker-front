@@ -1,4 +1,5 @@
 ---
+import DeviceCatalogBrowser from "../../components/devices/DeviceCatalogBrowser";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
 import ButtonLink from "../../components/ui/ButtonLink.astro";
@@ -6,6 +7,8 @@ import InfoRowLink from "../../components/ui/InfoRowLink.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
 import SidebarPanel from "../../components/ui/SidebarPanel.astro";
 import StatGrid from "../../components/ui/StatGrid.astro";
+import { createDefaultCatalogState, getCatalogResults } from "../../lib/catalog/core";
+import { getCatalogPayload } from "../../lib/catalog/server";
 import { readExportJson } from "../../lib/exports";
 import { formatProtocolLabel } from "../../lib/ui";
 
@@ -67,7 +70,9 @@ export async function getStaticPaths() {
   }));
 }
 
-const slugSegments = Astro.params.slug?.split("/").filter(Boolean) ?? [];
+const slugSegments = Array.isArray(Astro.params.slug)
+  ? Astro.params.slug.filter(Boolean)
+  : [];
 
 if (slugSegments.length === 0) {
   throw new Error("Missing category slug.");
@@ -78,6 +83,7 @@ const detail = await readExportJson<CategoryDetailResponse>(
   `categories/${categoryPath}.json`,
 );
 const products = await readExportJson<ProductsExport>("products.json");
+const catalogPayload = await getCatalogPayload();
 
 const category = detail.category;
 const mappedProducts = products.products.filter((product) =>
@@ -105,6 +111,21 @@ const summaryText =
   category.children.length > 0
     ? `${category.name} currently includes ${category.children.length} nested categorie${category.children.length === 1 ? "y" : "s"} and ${category.deviceCount} total mapped device${category.deviceCount === 1 ? "" : "s"} in the export snapshot.`
     : `${category.name} is a leaf category in the current export snapshot with ${category.deviceCount} mapped device${category.deviceCount === 1 ? "" : "s"}.`;
+const featureCounts = Object.fromEntries(
+  catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
+) as {
+  localControl: number;
+  matterCertified: number;
+  noCloud: number;
+  noHub: number;
+};
+const initialCatalog = getCatalogResults(
+  catalogPayload,
+  createDefaultCatalogState(),
+  "",
+  { categories: [category.path] },
+  12,
+);
 ---
 
 <BaseLayout
@@ -223,5 +244,34 @@ const summaryText =
         </ButtonLink>
       </aside>
     </div>
+
+    <section class="mt-12 border-t border-theme py-12">
+      <SectionHeader
+        eyebrow="Catalog"
+        title={`Browse ${category.name} devices`}
+        description="This scoped category catalog reuses the same client-side filtering flow as the main devices page while keeping the current category locked."
+      />
+
+      <DeviceCatalogBrowser
+        client:load
+        catalogEndpoint="/catalog.json"
+        pageSize={12}
+        autoloadMode="scroll"
+        protocols={catalogPayload.facets.protocols}
+        manufacturers={catalogPayload.facets.manufacturers}
+        categoryCount={catalogPayload.facets.categories.length}
+        featureCounts={featureCounts}
+        hiddenSections={{ categories: true }}
+        lockedFilters={{ categories: [category.path] }}
+        initialRender={{
+          products: initialCatalog.pagedProducts,
+          totalCount: initialCatalog.filteredProducts.length,
+          totalPages: initialCatalog.totalPages,
+          page: initialCatalog.safePage,
+          from: initialCatalog.from,
+          to: initialCatalog.to,
+        }}
+      />
+    </section>
   </div>
 </BaseLayout>

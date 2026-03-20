@@ -37,7 +37,7 @@ const style = getProtocolStyle(protocolSlug);
       {style.shortLabel}
     </div>
     <ProtocolBadge
-      slug={protocolSlug}
+      slug={protocolSlug ?? null}
       class="px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
     />
   </div>
