@@ -114,7 +114,7 @@ const styles = getProtocolStyle(product.primaryProtocol);
 const description =
   product.description && product.description !== product.name
     ? product.description
-    : `${product.name} is included in the SmartPicker export snapshot with compatibility data for ${product.compatibility.length} hub${product.compatibility.length === 1 ? "" : "s"}.`;
+    : `${product.name} includes compatibility information for ${product.compatibility.length} hub${product.compatibility.length === 1 ? "" : "s"}, along with key protocol and device details.`;
 
 const technicalDetails: { label: string; value: string }[] = [];
 
@@ -132,7 +132,7 @@ if (product.zigbeeDetails) {
       label: "Endpoints",
       value:
         product.zigbeeDetails.endpoints == null
-          ? "Not exported"
+          ? "Not listed"
           : JSON.stringify(product.zigbeeDetails.endpoints),
     },
   );
@@ -181,7 +181,7 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
 
 <BaseLayout
   title={`${product.name} | SmartPicker`}
-  description={`${product.name}${product.model ? ` (${product.model})` : ""} compatibility details, exported hub support, and protocol metadata.`}
+  description={`${product.name}${product.model ? ` (${product.model})` : ""} compatibility details, hub support, and protocol metadata.`}
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <Breadcrumbs
@@ -376,10 +376,10 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
                       </td>
                       <td class="px-6 py-4 text-[13px] text-secondary">
                         {entry.status === "verified"
-                          ? "Confirmed in current export"
+                          ? "Verified support"
                           : entry.status === "reported"
-                            ? "Community or source report included"
-                            : "Status captured in export"}
+                            ? "Reported compatibility"
+                            : "Compatibility noted"}
                       </td>
                     </tr>
                   ))
@@ -393,7 +393,7 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
           <div class="flex items-center justify-between border-b border-theme px-6 py-5">
             <h2 class="text-2xl font-semibold tracking-tight">Technical Details</h2>
             <span class="text-[13px] text-muted">
-              {product.primaryProtocol ? formatProtocolLabel(product.primaryProtocol) : "Device"} export
+              {product.primaryProtocol ? formatProtocolLabel(product.primaryProtocol) : "Device"} profile
             </span>
           </div>
           <div>
@@ -412,24 +412,23 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
 
         <section class="overflow-hidden rounded-2xl border border-theme bg-surface animate-fade-in">
           <div class="flex items-center justify-between border-b border-theme px-6 py-5">
-            <h2 class="text-2xl font-semibold tracking-tight">Export Notes</h2>
-            <span class="text-[13px] text-muted">Current snapshot only</span>
+            <h2 class="text-2xl font-semibold tracking-tight">What to know</h2>
+            <span class="text-[13px] text-muted">Catalog notes</span>
           </div>
           <div class="grid gap-px bg-[var(--sp-border)] max-md:grid-cols-1 md:grid-cols-2">
             <div class="bg-surface px-5 py-4">
-              <div class="text-sm font-medium">Description coverage</div>
+              <div class="text-sm font-medium">Compatibility information</div>
               <p class="mt-1 text-[13px] leading-relaxed text-muted">
-                This device currently exports a short description only. Richer
-                marketing copy, pricing, and annotated capability notes are not
-                in the dataset yet.
+                This page focuses on the details that matter most when comparing
+                products: protocol, control method, hub support, and known
+                compatibility status.
               </p>
             </div>
             <div class="bg-surface px-5 py-4">
-              <div class="text-sm font-medium">Capability coverage</div>
+              <div class="text-sm font-medium">Feature detail</div>
               <p class="mt-1 text-[13px] leading-relaxed text-muted">
-                `zigbeeDetails.exposes` and endpoint payloads are not populated in
-                the current sample, so this page surfaces protocol metadata and
-                compatibility instead of a fabricated capabilities grid.
+                Detailed capability lists are not available for every device, so
+                SmartPicker keeps the emphasis on compatibility and platform fit.
               </p>
             </div>
           </div>
@@ -438,23 +437,23 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
 
       <aside class="flex flex-col gap-6 max-lg:order-first">
         <div class="animate-fade-in">
-          <SidebarPanel title="Data Sources">
+          <SidebarPanel title="At a glance">
             <div class="flex flex-col gap-3 rounded-2xl border border-theme bg-surface p-4">
               <div class="flex items-center gap-3">
                 <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--sp-green)]"></span>
-                <span class="flex-1 font-medium">Product detail export</span>
+                <span class="flex-1 font-medium">Compatibility profile</span>
                 <span class="rounded-full bg-green-subtle px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase text-green">
-                  Primary
+                  Live
                 </span>
               </div>
               <div class="flex items-center gap-3">
                 <span class="h-2 w-2 shrink-0 rounded-full bg-[var(--sp-blue-500)]"></span>
-                <span class="flex-1 font-medium">Catalog index join</span>
-                <span class="text-xs text-muted">Related devices</span>
+                <span class="flex-1 font-medium">Related products</span>
+                <span class="text-xs text-muted">Comparison view</span>
               </div>
               <div class="text-[13px] leading-relaxed text-muted">
-                The page is built from `products/{slug}.json` plus `products.json`
-                for related-device context.
+                Use this page to review the essentials quickly before comparing
+                alternatives from the same manufacturer or protocol.
               </div>
             </div>
           </SidebarPanel>
@@ -476,7 +475,7 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
                 ))
               ) : (
                 <div class="px-5 py-4 text-[13px] text-muted">
-                  No related products are available in the current export.
+                  No similar devices are listed right now.
                 </div>
               )
             }
@@ -484,14 +483,14 @@ const updatedLabel = new Date(product.updatedAt).toLocaleDateString("en-US", {
           </SidebarPanel>
         </div>
 
-        <SidebarPanel title="Snapshot">
+        <SidebarPanel title="Catalog details">
           <div class="flex flex-col gap-2 text-[13px] text-muted">
           <div class="flex justify-between gap-4">
             <span>Last updated</span>
             <span class="font-medium text-secondary">{updatedLabel}</span>
           </div>
           <div class="flex justify-between gap-4">
-            <span>Export generated</span>
+            <span>Catalog refreshed</span>
             <span class="font-medium text-secondary">{exportGenerated}</span>
           </div>
           <div class="flex justify-between gap-4">

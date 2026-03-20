@@ -56,12 +56,12 @@ function statusCount(hub: HubSummary, key: string): number {
 
 <BaseLayout
   title="Smart Home Hubs | SmartPicker"
-  description="Compare exported smart home hubs and controllers to see supported protocols, mapped devices, and compatibility status coverage."
+  description="Compare smart home hubs and controllers by supported protocols, device coverage, and compatibility status."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
       title="Smart Home Hubs"
-      description="Compare hubs and controllers to see which devices they support. This page uses the exported hub index directly, so the counts below reflect the current SmartPicker snapshot rather than placeholder marketing data."
+      description="Compare hubs and controllers to see which platforms support the devices and standards that matter most to your setup."
       stats={[
         { value: formatCount.format(hubs.count), label: "Hubs tracked" },
         { value: formatCount.format(totalProtocols), label: "Protocol families" },
@@ -82,7 +82,7 @@ function statusCount(hub: HubSummary, key: string): number {
       }
     </div>
 
-    <SectionHeader eyebrow="Featured hubs" title="Controllers in the current snapshot" />
+    <SectionHeader eyebrow="Featured hubs" title="Controllers worth comparing" />
 
     <section class="grid gap-4 pb-6 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
       {
@@ -230,8 +230,8 @@ function statusCount(hub: HubSummary, key: string): number {
         </h3>
         <p class="text-sm leading-relaxed text-secondary">
           Two hubs may both claim Zigbee support but still differ dramatically in
-          device coverage. SmartPicker tracks exported support data so you can see
-          what is actually mapped before committing to a platform.
+          device coverage. SmartPicker helps you compare real device support so
+          you can choose a platform with fewer surprises.
         </p>
       </article>
     </section>

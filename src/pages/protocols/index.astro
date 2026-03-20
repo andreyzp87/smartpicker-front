@@ -150,12 +150,12 @@ const formatCount = new Intl.NumberFormat("en-US");
 
 <BaseLayout
   title="Protocols | SmartPicker"
-  description="Browse smart home protocol families with export-driven device counts, supporting hubs, and detail pages for each protocol."
+  description="Compare smart home protocols by device coverage, brands, and supporting hubs."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
       title="Protocols"
-      description="Browse the transport and ecosystem layers behind the current SmartPicker snapshot. Each card shows what the export actually contains today, including protocols that are tracked structurally but still have zero mapped devices."
+      description="Understand the wireless and ecosystem standards behind the catalog, from widely supported protocols to newer families with limited device coverage."
       stats={[
         {
           value: formatCount.format(protocols.count),
@@ -189,12 +189,12 @@ const formatCount = new Intl.NumberFormat("en-US");
                 {getProtocolStyle(spotlightProtocol.slug).shortLabel}
               </div>
               <div class="min-w-0 flex-1">
-                <SectionHeader eyebrow="Snapshot highlight" title={spotlightProtocol.title} />
+                <SectionHeader eyebrow="Protocol highlight" title={spotlightProtocol.title} />
                 <p class="mt-3 max-w-[700px] text-sm leading-relaxed text-secondary">
                   {
                     spotlightProtocol.deviceCount > 0
-                      ? `${spotlightProtocol.name} is the only protocol with mapped devices in the March 12, 2026 snapshot, so its detail page is currently the deepest connected slice between devices, manufacturers, and hubs.`
-                      : `${spotlightProtocol.name} is structurally exported, but the current snapshot does not include mapped devices for it yet.`
+                      ? `${spotlightProtocol.name} currently has the strongest coverage in the catalog, making it the best place to compare devices, brands, and hub support side by side.`
+                      : `${spotlightProtocol.name} is tracked in SmartPicker, but there are no devices listed under this protocol yet.`
                   }
                 </p>
               </div>
@@ -266,7 +266,7 @@ const formatCount = new Intl.NumberFormat("en-US");
                     <EmptyState
                       icon={getProtocolStyle(spotlightProtocol.slug).shortLabel}
                       title="No manufacturers mapped yet"
-                      description="This protocol is exported as a tracked family, but the current snapshot has not linked any products to it yet."
+                      description="No manufacturers are currently listed under this protocol."
                     />
                   )
                 }
@@ -295,12 +295,11 @@ const formatCount = new Intl.NumberFormat("en-US");
           <SectionHeader
             eyebrow="All protocol families"
             title="Protocol coverage"
-            description={`Generated ${generatedLabel}. Empty protocols stay visible so the information architecture matches the export contract.`}
+            description={`Catalog refreshed ${generatedLabel}. Use these cards to compare device coverage, brands, and hub support across each protocol family.`}
           />
         </div>
         <div class="text-sm text-muted">
-          {formatCount.format(emptyProtocolCount)} waiting for their first mapped
-          device
+          {formatCount.format(emptyProtocolCount)} with limited or no current device coverage
         </div>
       </div>
 
@@ -340,21 +339,19 @@ const formatCount = new Intl.NumberFormat("en-US");
 
     <section class="grid grid-cols-2 gap-4 pb-20 max-md:grid-cols-1">
       <article class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-        <h3>What this page is showing</h3>
+        <h3>How to use this page</h3>
         <p class="mt-3 text-sm leading-relaxed text-secondary">
-          Device counts come from the protocol export, while manufacturer and hub
-          counts are derived from the mapped products in the same snapshot. That
-          means some protocol families can show declared hub support before any
-          devices have been linked.
+          Start with device coverage, then compare manufacturer presence and hub
+          support. It is a fast way to understand whether a protocol is mature,
+          broadly supported, or still relatively niche in the current catalog.
         </p>
       </article>
       <article class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
         <h3>Where to go next</h3>
         <p class="mt-3 text-sm leading-relaxed text-secondary">
           Open a protocol page for the connected view, or jump into the catalog
-          if you want the current device list immediately. The structure is ready
-          for Matter, Thread, Wi-Fi, Bluetooth, and Z-Wave as soon as those
-          exports start carrying mapped products.
+          if you want to compare products immediately. Hubs and manufacturers
+          pages add another useful layer when you are deciding on an ecosystem.
         </p>
         <div class="mt-4 flex flex-wrap gap-3">
           <ButtonLink href="/devices" class="px-5 py-2.5">

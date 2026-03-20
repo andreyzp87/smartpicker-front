@@ -120,7 +120,7 @@ const recentDevicesLabel =
 
 <BaseLayout
   title="SmartPicker | Find Compatible Smart Home Devices"
-  description="Search smart home devices, compare protocol coverage, and explore hub compatibility using SmartPicker export data."
+  description="Search smart home devices, compare protocol coverage, and explore hub compatibility with SmartPicker."
 >
   <HomeHero
     indexedDevices={formatCount.format(site.stats.devices)}
@@ -136,7 +136,7 @@ const recentDevicesLabel =
   <section id="protocols" class="mx-auto mt-20 max-w-[1200px] px-6">
     <SectionHeader
       title="Browse by Protocol"
-      description="Every protocol export is surfaced here, even when the current snapshot has zero matching devices."
+      description="Compare major smart home standards and see how much device and hub coverage each one has."
       actionHref="/protocols"
       actionLabel="See all protocols"
     />
@@ -157,7 +157,7 @@ const recentDevicesLabel =
   <section class="mx-auto mt-16 max-w-[1200px] px-6">
     <SectionHeader
       title="Featured Devices"
-      description="Pulled in the same order as `featuredDeviceSlugs` from the current site export."
+      description="A curated look at notable devices, with protocol and hub support visible at a glance."
       actionHref="/devices"
       actionLabel="Browse all"
     />
@@ -187,7 +187,7 @@ const recentDevicesLabel =
   <section class="mx-auto mt-16 max-w-[1200px] px-6">
     <SectionHeader
       title="Compatible Hubs & Platforms"
-      description="Hub coverage pulled from the exported hub index."
+      description="Compare controllers and platforms by supported protocols and connected devices."
       actionHref="/hubs"
       actionLabel="View all"
     />
@@ -209,8 +209,8 @@ const recentDevicesLabel =
 
   <section id="manufacturers" class="mx-auto mt-16 max-w-[1200px] px-6">
     <SectionHeader
-      title="Manufacturers in This Snapshot"
-      description="Category exports are still empty, so the home page highlights the brands currently represented in `manufacturers.json`."
+      title="Manufacturers"
+      description="Explore the leading smart home brands currently represented in the catalog."
       actionHref="/devices"
       actionLabel="Explore devices"
     />

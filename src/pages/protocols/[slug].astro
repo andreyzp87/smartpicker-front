@@ -190,8 +190,8 @@ const updatedLabel = protocolExport.protocol.updatedAt
   : "Awaiting first device-level refresh";
 const summary =
   mappedProducts.length > 0
-    ? `${protocolExport.protocol.name} currently maps ${formatCount.format(mappedProducts.length)} device${mappedProducts.length === 1 ? "" : "s"} from ${formatCount.format(manufacturerBreakdown.length)} manufacturer${manufacturerBreakdown.length === 1 ? "" : "s"} in the current snapshot.`
-    : `${protocolExport.protocol.name} is part of the export contract, but the March 12, 2026 snapshot does not yet include mapped devices for this protocol.`;
+    ? `${protocolExport.protocol.name} currently includes ${formatCount.format(mappedProducts.length)} device${mappedProducts.length === 1 ? "" : "s"} from ${formatCount.format(manufacturerBreakdown.length)} manufacturer${manufacturerBreakdown.length === 1 ? "" : "s"}.`
+    : `${protocolExport.protocol.name} is tracked in SmartPicker, but there are no devices listed under this protocol yet.`;
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -211,7 +211,7 @@ const initialCatalog = getCatalogResults(
 
 <BaseLayout
   title={`${protocolExport.protocol.name} | SmartPicker`}
-  description={`${protocolExport.protocol.name} devices, supporting hubs, and manufacturer coverage from the SmartPicker export snapshot.`}
+  description={`${protocolExport.protocol.name} devices, supporting hubs, and manufacturer coverage in SmartPicker.`}
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <nav class="animate-fade-in pt-6 text-sm text-muted">
@@ -247,7 +247,7 @@ const initialCatalog = getCatalogResults(
           <div class="mt-4 flex flex-wrap gap-2">
             <ProtocolBadge slug={protocolExport.protocol.slug} class="rounded-md" />
             <span class="rounded-md border border-theme bg-badge px-3 py-1 text-[13px] font-medium text-secondary">
-              Snapshot generated {generatedLabel}
+              Catalog refreshed {generatedLabel}
             </span>
             <span class="rounded-md border border-theme bg-badge px-3 py-1 text-[13px] font-medium text-secondary">
               Updated {updatedLabel}
@@ -306,8 +306,8 @@ const initialCatalog = getCatalogResults(
             <div>
               <SectionHeader
                 eyebrow="Devices in this protocol"
-                title="Mapped devices"
-                description="Product cards below come from the protocol export's `deviceSlugs` list, then resolve against the shared product index."
+                title="Listed devices"
+                description="Browse the devices currently associated with this protocol and compare compatibility signals at a glance."
               />
             </div>
             {
@@ -394,8 +394,8 @@ const initialCatalog = getCatalogResults(
             ) : (
               <EmptyState
                 icon={style.shortLabel}
-                title="No devices mapped yet"
-                description="The route is generated and linked, but this protocol currently has an empty `deviceSlugs` list. That is why the page focuses on the export status rather than inventing a device catalog."
+                title="No devices listed yet"
+                description="There are no devices currently listed under this protocol. Browse the full catalog or check other protocol pages for broader coverage."
                 primaryAction={{ href: "/devices", label: "Browse all devices" }}
                 secondaryAction={{ href: "/protocols", label: "Back to protocols" }}
               />
@@ -446,7 +446,7 @@ const initialCatalog = getCatalogResults(
               <EmptyState
                 icon={style.shortLabel}
                 title="Manufacturer breakdown will appear here"
-                description="Once products are assigned to this protocol, SmartPicker can derive the brand distribution automatically from the same export snapshot."
+                description="Manufacturer coverage will appear here as devices are added to this protocol."
               />
             )
           }
@@ -491,7 +491,7 @@ const initialCatalog = getCatalogResults(
               <EmptyState
                 icon={style.shortLabel}
                 title="No supporting hubs listed"
-                description="The current hub export does not declare support for this protocol yet, so there is no hub coverage panel to show."
+                description="No hubs are currently listed with support for this protocol."
               />
             )
           }
@@ -500,13 +500,13 @@ const initialCatalog = getCatalogResults(
 
       <aside class="flex flex-col gap-4">
         <section class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-          <h3>Snapshot facts</h3>
+          <h3>Key facts</h3>
           <div class="mt-4 flex flex-col gap-3">
             <div class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3">
               <div>
                 <div class="text-sm font-semibold">Local control</div>
                 <div class="text-xs text-muted">
-                  Exported count for this protocol
+                  Devices marked for local control
                 </div>
               </div>
               <span class="font-mono text-sm text-primary">
@@ -565,8 +565,8 @@ const initialCatalog = getCatalogResults(
               </div>
             ) : (
               <p class="mt-3 text-sm leading-relaxed text-secondary">
-                No product-level compatibility statuses are available yet because
-                this protocol has no mapped devices in the current snapshot.
+                No device-level compatibility statuses are available yet because
+                no devices are currently listed under this protocol.
               </p>
             )
           }
@@ -611,7 +611,7 @@ const initialCatalog = getCatalogResults(
       <SectionHeader
         eyebrow="Catalog"
         title={`Browse ${protocolExport.protocol.name} devices`}
-        description="This scoped catalog keeps filtering, sorting, and pagination on the client while staying locked to the current protocol."
+        description="Browse devices for this protocol and refine the results by manufacturer or key features."
       />
 
       <DeviceCatalogBrowser

@@ -36,18 +36,6 @@ const generatedLabel = new Date(site.generated).toLocaleString("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
 });
-const latestRouteUpdate = sitemap.urls.reduce<string | null>((latest, entry) => {
-  if (!latest || entry.lastModified > latest) {
-    return entry.lastModified;
-  }
-
-  return latest;
-}, null);
-const latestRouteLabel = latestRouteUpdate
-  ? new Date(latestRouteUpdate).toLocaleDateString("en-US", {
-      dateStyle: "medium",
-    })
-  : "Not available";
 const activeProtocolEntries = Object.entries(site.protocolCounts).filter(
   ([, count]) => count > 0,
 );
@@ -64,96 +52,40 @@ const dataSources = [
     icon: "Z2M",
     name: "Zigbee2MQTT",
     description:
-      "Device definitions from the Zigbee2MQTT ecosystem shape much of the current Zigbee export structure, including model-level device coverage and compatibility metadata.",
-    detail: "Primary source family behind the populated Zigbee slice.",
+      "Provides detailed Zigbee device definitions that help verify model names, compatibility metadata, and product-level coverage.",
+    detail: "Reference source for Zigbee device support.",
   },
   {
     iconClass: "bg-zigbee text-zigbee",
     icon: "BL",
     name: "Blakadder",
     description:
-      "Blakadder remains one of the intended open data sources for cross-platform compatibility coverage, and the about page keeps that source relationship visible even while this sample snapshot is still small.",
-    detail: "Included in the public project direction and HTML reference.",
+      "Supports cross-platform compatibility research with useful community context around integrations, controllers, and device support.",
+    detail: "Reference source for ecosystem coverage.",
   },
   {
     iconClass: "bg-zwave text-zwave",
     icon: "ZW",
     name: "Z-Wave JS",
     description:
-      "The export contract is already prepared for Z-Wave devices and protocol pages, even though the March 12, 2026 snapshot does not yet include mapped Z-Wave products.",
-    detail: "Tracked source family with route support ready.",
-  },
-];
-
-const roadmapItems = [
-  {
-    status: "Complete",
-    accent:
-      "border-[var(--sp-green)] bg-green-subtle text-green",
-    dotClass:
-      "border-[3px] border-[var(--sp-green)] bg-green-subtle",
-    title: "Core catalog routes",
-    description:
-      "Home, devices, device detail, hubs, manufacturers, categories, and protocol pages are all now rendered from the export contract instead of placeholders.",
-    chips: ["Home", "Devices", "Hubs", "Manufacturers", "Protocols"],
-  },
-  {
-    status: "Complete",
-    accent:
-      "border-[var(--sp-green)] bg-green-subtle text-green",
-    dotClass:
-      "border-[3px] border-[var(--sp-green)] bg-green-subtle",
-    title: "Shared navigation and design shell",
-    description:
-      "The site header, footer, theme toggle, and route highlighting are now consistent across the published public routes.",
-    chips: ["Theme toggle", "Active nav", "Shared footer"],
-  },
-  {
-    status: "In Progress",
-    accent:
-      "border-[var(--sp-blue-500)] bg-blue-subtle text-blue shadow-[0_0_0_4px_rgba(59,130,246,0.12)]",
-    dotClass:
-      "border-[3px] border-[var(--sp-blue-500)] bg-blue-subtle shadow-[0_0_0_4px_rgba(59,130,246,0.12)]",
-    title: "Broader protocol coverage",
-    description:
-      "The protocol architecture is live for Matter, Thread, Wi-Fi, Bluetooth, and Z-Wave, but the current snapshot still only carries mapped Zigbee devices.",
-    chips: ["Matter", "Thread", "Wi-Fi", "Bluetooth", "Z-Wave"],
-  },
-  {
-    status: "Planned",
-    accent: "border-theme text-secondary",
-    dotClass: "border-[3px] border-theme",
-    title: "Deeper category data",
-    description:
-      "Nested category routes are already scaffolded, but they are waiting on the export pipeline to publish actual category hierarchy and device assignments.",
-    chips: ["categories.json", "paths.json"],
-  },
-  {
-    status: "Planned",
-    accent: "border-theme text-secondary",
-    dotClass: "border-[3px] border-theme",
-    title: "Richer source attribution",
-    description:
-      "Compatibility evidence, verification levels, and source-specific notes can become more prominent as the exports grow beyond the current sample snapshot.",
-    chips: ["Verification", "Source notes", "History"],
+      "Helps anchor Z-Wave product identification and ecosystem information for devices, hubs, and future compatibility coverage.",
+    detail: "Reference source for Z-Wave metadata.",
   },
 ];
 ---
 
 <BaseLayout
   title="About SmartPicker"
-  description="About SmartPicker, the export-driven smart home compatibility project, including current snapshot stats, data sources, and roadmap."
+  description="Learn how SmartPicker helps you evaluate smart home compatibility with clearer device, hub, manufacturer, and protocol information."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
-      title="Compatibility data for the smart home you're actually building"
-      description="SmartPicker is an export-driven compatibility site for checking whether devices, protocols, hubs, and manufacturers fit together before you buy hardware or rebuild your setup."
+      title="A clearer way to evaluate smart home compatibility"
+      description="SmartPicker helps you compare devices, hubs, manufacturers, and wireless standards before you buy, so you can build a setup that fits your home and your expectations."
       descriptionClass="max-w-[680px] text-lg"
     >
       <p class="mt-4 max-w-[760px] text-sm leading-relaxed text-muted">
-        This page follows the HTML example in `docs/html_examples/about-page.html`,
-        but every metric below is grounded in the current snapshot generated on
-        {` ${generatedLabel}`}.
+        Catalog data was last refreshed {generatedLabel}.
       </p>
     </PageIntro>
 
@@ -164,35 +96,23 @@ const roadmapItems = [
         items={[
           { value: formatCount.format(site.stats.devices), label: "Devices" },
           { value: formatCount.format(site.stats.manufacturers), label: "Manufacturers" },
-          { value: formatCount.format(site.stats.protocols), label: "Protocols tracked" },
-          { value: formatCount.format(sitemap.count), label: "Published routes" },
+          { value: formatCount.format(site.stats.protocols), label: "Protocols" },
+          { value: formatCount.format(sitemap.count), label: "Catalog pages" },
         ]}
       />
     </div>
 
     <section class="animate-fade-in">
-      <SectionHeader class="mt-12" title="The problem" />
+      <SectionHeader class="mt-12" title="Why SmartPicker" />
       <p class="mb-4 text-base leading-relaxed text-secondary">
-        Smart home buying decisions still turn into multi-tab research sessions:
-        one tab for a device definition, another for a hub integration page, and
-        a third for a forum thread that may or may not still be accurate.
+        Building a smart home often means comparing product pages, integration
+        lists, and community discussions just to answer a simple question: will
+        this device work with the rest of my setup?
       </p>
       <p class="text-base leading-relaxed text-secondary">
-        SmartPicker exists to compress that work into a single, browseable public
-        reference. The goal is simple: expose compatibility claims clearly, keep
-        uncertainty visible, and make route-level navigation match the exported
-        data instead of marketing copy.
-      </p>
-    </section>
-
-    <section class="animate-fade-in">
-      <SectionHeader class="mt-12" title="How it works" />
-      <p class="mb-4 text-base leading-relaxed text-secondary">
-        The current Astro frontend reads the exported snapshot directly and turns
-        it into static pages for devices, hubs, manufacturers, categories, and
-        protocols. That means the public site can reflect the real shape of the
-        data, including sparse or empty sections, without pretending that missing
-        coverage already exists.
+        SmartPicker brings those decisions into one place. The goal is to make
+        compatibility easier to understand, easier to compare, and easier to
+        trust when you are choosing devices, hubs, or an entire ecosystem.
       </p>
     </section>
 
@@ -201,32 +121,30 @@ const roadmapItems = [
         <div class="mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border border-blue bg-blue-subtle font-mono text-[13px] font-bold text-blue">
           1
         </div>
-        <div class="mb-1.5 text-[15px] font-bold">Export</div>
+        <div class="mb-1.5 text-[15px] font-bold">Compare devices</div>
         <div class="text-[13px] leading-relaxed text-secondary">
-          Structured JSON snapshots publish the public data model for devices,
-          protocols, hubs, manufacturers, categories, and route metadata.
+          Review protocol support, hub compatibility, and key product traits in
+          one place instead of stitching details together from multiple tabs.
         </div>
       </div>
       <div class="rounded-2xl border border-theme bg-surface px-5 py-6">
         <div class="mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border border-blue bg-blue-subtle font-mono text-[13px] font-bold text-blue">
           2
         </div>
-        <div class="mb-1.5 text-[15px] font-bold">Render</div>
+        <div class="mb-1.5 text-[15px] font-bold">Understand protocols</div>
         <div class="text-[13px] leading-relaxed text-secondary">
-          Astro pages read those exports at build time and derive summaries,
-          cross-links, empty states, and snapshot-specific stats from the same
-          source of truth.
+          See which standards are widely supported, which brands use them, and
+          which hubs are most relevant for your preferred ecosystem.
         </div>
       </div>
       <div class="rounded-2xl border border-theme bg-surface px-5 py-6">
         <div class="mb-3.5 flex h-7 w-7 items-center justify-center rounded-full border border-blue bg-blue-subtle font-mono text-[13px] font-bold text-blue">
           3
         </div>
-        <div class="mb-1.5 text-[15px] font-bold">Explain honestly</div>
+        <div class="mb-1.5 text-[15px] font-bold">Choose with confidence</div>
         <div class="text-[13px] leading-relaxed text-secondary">
-          If a slice is empty, like categories in this snapshot, the page says so
-          directly and stays ready for future data instead of inventing placeholder
-          hierarchy.
+          SmartPicker is designed to show coverage clearly, so you can make
+          better decisions about reliability, local control, and platform fit.
         </div>
       </div>
     </div>
@@ -234,9 +152,8 @@ const roadmapItems = [
     <section class="animate-fade-in">
       <SectionHeader class="mt-12" title="Data sources" />
       <p class="mb-4 text-base leading-relaxed text-secondary">
-        The project direction stays anchored in open smart home data sources. The
-        current frontend snapshot is still small, but the source model is already
-        pointed at the ecosystems the community actually uses.
+        SmartPicker is informed by established smart home data sources and
+        community knowledge from the ecosystems people already rely on.
       </p>
     </section>
 
@@ -266,15 +183,13 @@ const roadmapItems = [
 
     <blockquote class="my-6 rounded-r-[10px] border-l-[3px] border-[var(--sp-blue-400)] bg-blockquote px-6 py-5">
       <p class="text-base leading-relaxed text-secondary">
-        The current snapshot tracks {formatCount.format(site.stats.protocols)}
-        {" "}protocol families, but only {activeProtocolLabel} currently has mapped
-        devices. That mismatch is visible on purpose: SmartPicker should show the
-        real state of coverage, not an aspirational version of it.
+        SmartPicker would rather show limited coverage clearly than overstate
+        support. Today, active device coverage is strongest in {activeProtocolLabel}.
       </p>
     </blockquote>
 
     <section class="animate-fade-in">
-      <SectionHeader class="mt-12" title="What we believe in" />
+      <SectionHeader class="mt-12" title="What you can expect" />
     </section>
 
     <div class="my-7 mb-10 grid grid-cols-2 gap-3 max-md:grid-cols-1">
@@ -283,11 +198,11 @@ const roadmapItems = [
           <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-green bg-green-subtle text-[13px] text-green">
             ✓
           </span>
-          Data honesty
+          Clear coverage
         </h3>
         <p class="text-base leading-relaxed text-secondary">
-          Counts, empty states, and route availability should match the export
-          snapshot even when the data is sparse or incomplete.
+          Device, hub, and protocol pages are designed to make support levels
+          easy to scan, compare, and understand quickly.
         </p>
       </article>
       <article class="rounded-2xl border border-theme bg-surface p-6">
@@ -298,8 +213,8 @@ const roadmapItems = [
           Local-first thinking
         </h3>
         <p class="text-base leading-relaxed text-secondary">
-          Protocol and hub coverage matter because people are trying to build
-          resilient systems, not just assemble a list of gadgets.
+          Local control and hub requirements matter because long-term reliability
+          matters. SmartPicker keeps those signals visible during comparison.
         </p>
       </article>
       <article class="rounded-2xl border border-theme bg-surface p-6">
@@ -307,11 +222,11 @@ const roadmapItems = [
           <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-purple bg-purple-subtle text-[13px] text-purple">
             ↗
           </span>
-          Open structure
+          Practical organization
         </h3>
         <p class="text-base leading-relaxed text-secondary">
-          The public pages are shaped around exports that other tools and future
-          frontends can reuse, rather than hardcoded page-specific content models.
+          Browse by product, brand, hub, or protocol depending on how you shop
+          and how you think about your smart home.
         </p>
       </article>
       <article class="rounded-2xl border border-theme bg-surface p-6">
@@ -319,72 +234,55 @@ const roadmapItems = [
           <span class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-cyan bg-cyan-subtle text-[13px] text-cyan">
             ⌁
           </span>
-          Community readability
+          Fast comparison
         </h3>
         <p class="text-base leading-relaxed text-secondary">
-          A compatibility site should be easy to scan and understand quickly,
-          especially when someone is already comparing multiple devices or hubs.
+          The site is built to reduce research time when you are comparing
+          several devices, platforms, or manufacturers at once.
         </p>
       </article>
     </div>
 
     <section class="animate-fade-in">
-      <SectionHeader class="mt-12" title="Roadmap" />
+      <SectionHeader class="mt-12" title="Current coverage" />
       <p class="text-base leading-relaxed text-secondary">
-        The current public site has moved well past placeholders, but the
-        snapshot still makes it clear where the export pipeline is ahead of the
-        actual data population.
+        SmartPicker currently covers {formatCount.format(site.stats.devices)}
+        devices across {formatCount.format(site.stats.manufacturers)}
+        {" "}manufacturers and {formatCount.format(site.stats.protocols)} protocol
+        families, with {formatCount.format(sitemap.count)} pages available for
+        browsing and comparison.
       </p>
     </section>
 
-    <div class="relative my-7 mb-12 pl-7">
-      {
-        roadmapItems.map((item, index) => (
-          <div
-            class="relative pb-7"
-            style={`animation-delay:${0.55 + index * 0.05}s`}
-          >
-            <div class={`absolute -left-7 top-1 h-4 w-4 rounded-full ${item.dotClass}`}>
-            </div>
-            <div
-              class={`mb-1 inline-flex rounded-md border px-2 py-0.5 text-[11px] font-semibold tracking-wider uppercase ${item.accent}`}
-            >
-              {item.status}
-            </div>
-            <div class="mb-1 text-base font-bold">{item.title}</div>
-            <div class="text-sm leading-relaxed text-secondary">
-              {item.description}
-            </div>
-            <div class="mt-2 flex flex-wrap gap-1">
-              {
-                item.chips.map((chip) => (
-                  <span class="rounded-md border border-badge bg-badge px-2 py-0.5 text-[11px] font-medium text-secondary">
-                    {chip}
-                  </span>
-                ))
-              }
-            </div>
-          </div>
-        ))
-      }
+    <div class="my-7 mb-12 grid grid-cols-3 gap-3 max-md:grid-cols-1">
+      <article class="rounded-2xl border border-theme bg-surface p-6">
+        <h3 class="text-base font-bold tracking-tight">Devices</h3>
+        <p class="mt-2 text-sm leading-relaxed text-secondary">
+          Review product pages for protocol, control method, hub compatibility,
+          and model-level detail.
+        </p>
+      </article>
+      <article class="rounded-2xl border border-theme bg-surface p-6">
+        <h3 class="text-base font-bold tracking-tight">Hubs and platforms</h3>
+        <p class="mt-2 text-sm leading-relaxed text-secondary">
+          Compare controllers by supported protocols, connected devices, and
+          overall coverage across the catalog.
+        </p>
+      </article>
+      <article class="rounded-2xl border border-theme bg-surface p-6">
+        <h3 class="text-base font-bold tracking-tight">Brands and protocols</h3>
+        <p class="mt-2 text-sm leading-relaxed text-secondary">
+          Understand how manufacturers and wireless standards fit into the
+          broader smart home landscape before committing to a direction.
+        </p>
+      </article>
     </div>
 
-    <section class="animate-fade-in">
-      <SectionHeader class="mt-12" title="Snapshot notes" />
-      <p class="text-base leading-relaxed text-secondary">
-        Categories are still empty in the current export, the populated protocol
-        slice is Zigbee, and the most recent route data in the current sitemap is
-        dated {latestRouteLabel}. That may sound small, but it is enough to prove
-        the full route architecture end to end.
-      </p>
-    </section>
-
     <div class="my-12 rounded-2xl border border-theme bg-hero-gradient px-8 py-9 text-center">
-      <h2 class="text-[22px] font-bold tracking-tight">Built in the open</h2>
+      <h2 class="text-[22px] font-bold tracking-tight">Start exploring</h2>
       <p class="mx-auto mt-3 max-w-[760px] text-base leading-relaxed text-secondary">
-        The public Astro site is now reading from the same exports across home,
-        browse, detail, hub, manufacturer, category, and protocol pages. The next
-        improvements are mostly about richer data, not rebuilding the structure.
+        Whether you are evaluating a single device or narrowing down an entire
+        platform, SmartPicker gives you a faster path to the details that matter.
       </p>
       <div class="mt-5 flex flex-wrap justify-center gap-3">
         <ButtonLink href="/devices">
@@ -397,17 +295,15 @@ const roadmapItems = [
     </div>
 
     <section class="animate-fade-in pb-16">
-      <SectionHeader class="mt-12" title="Technical details" />
+      <SectionHeader class="mt-12" title="Who SmartPicker is for" />
       <p class="text-base leading-relaxed text-secondary">
-        On the public side, SmartPicker is now a static Astro frontend that reads
-        the export contract directly at build time. That keeps route generation,
-        stats, and cross-links deterministic and easy to verify with a single
-        production build.
+        SmartPicker is useful for homeowners, installers, and enthusiasts who
+        want to make better buying decisions with less guesswork.
       </p>
       <p class="mt-4 text-base leading-relaxed text-secondary">
-        The public route inventory currently covers {formatCount.format(sitemap.count)}
-        {" "}pages from the snapshot, including all protocol detail routes, and is
-        ready for deeper category and protocol data as soon as those exports fill in.
+        If you care about compatibility, local control, or long-term platform
+        flexibility, the catalog is designed to help you compare options without
+        digging through scattered sources first.
       </p>
     </section>
   </div>

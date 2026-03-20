@@ -192,8 +192,8 @@ const updatedLabel = manufacturer.updatedAt
   : "Unknown";
 const summaryText =
   protocolBreakdown.length > 0
-    ? `${manufacturer.name} currently contributes ${manufacturer.deviceCount} published devices across ${protocolBreakdown.length} protocol ${protocolBreakdown.length === 1 ? "family" : "families"} in the SmartPicker export snapshot.`
-    : `${manufacturer.name} is included in the SmartPicker export snapshot with ${manufacturer.deviceCount} published devices.`;
+    ? `${manufacturer.name} currently includes ${manufacturer.deviceCount} device${manufacturer.deviceCount === 1 ? "" : "s"} across ${protocolBreakdown.length} protocol ${protocolBreakdown.length === 1 ? "family" : "families"} in the catalog.`
+    : `${manufacturer.name} currently includes ${manufacturer.deviceCount} device${manufacturer.deviceCount === 1 ? "" : "s"} in the catalog.`;
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -213,7 +213,7 @@ const initialCatalog = getCatalogResults(
 
 <BaseLayout
   title={`${manufacturer.name} | SmartPicker`}
-  description={`${manufacturer.name} device coverage, protocol breakdown, and mapped hub compatibility from SmartPicker exports.`}
+  description={`${manufacturer.name} device coverage, protocol breakdown, and hub compatibility in SmartPicker.`}
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <Breadcrumbs
@@ -237,7 +237,7 @@ const initialCatalog = getCatalogResults(
             {summaryText} {
               manufacturer.website
                 ? `Official website: ${manufacturer.website.replace(/^https?:\/\//, "")}.`
-                : "Website metadata is not included in the current export."
+                : "An official website is not listed for this brand."
             }
           </p>
 
@@ -495,8 +495,7 @@ const initialCatalog = getCatalogResults(
                 </a>
               ) : (
                 <p class="text-[13px] leading-relaxed text-muted">
-                  No official website is attached to this manufacturer in the
-                  current export.
+                  No official website is listed for this manufacturer.
                 </p>
               )
             }
@@ -519,7 +518,7 @@ const initialCatalog = getCatalogResults(
                 ))
               ) : (
                 <div class="text-[13px] text-muted">
-                  No hub relationships are exported for this manufacturer yet.
+                  No compatible hubs are listed for this manufacturer yet.
                 </div>
               )
             }
@@ -544,13 +543,13 @@ const initialCatalog = getCatalogResults(
                     title={candidate.name}
                     meta={candidate.sharedProtocols.length > 0
                       ? candidate.sharedProtocols.map((protocol) => formatProtocolLabel(protocol)).join(", ")
-                      : "No shared protocols in snapshot"}
+                      : "No shared protocols listed"}
                     count={formatCount.format(candidate.deviceCount)}
                   />
                 ))
               ) : (
                 <div class="text-[13px] text-muted">
-                  No related manufacturers are available in the current export.
+                  No related manufacturers are listed right now.
                 </div>
               )
             }
@@ -572,7 +571,7 @@ const initialCatalog = getCatalogResults(
       <SectionHeader
         eyebrow="Catalog"
         title={`Browse ${manufacturer.name} devices`}
-        description="This interactive catalog uses the same client-side filtering engine as the main devices page, scoped to the current manufacturer."
+        description="Browse devices from this manufacturer and refine the results by protocol or key features."
       />
 
       <DeviceCatalogBrowser

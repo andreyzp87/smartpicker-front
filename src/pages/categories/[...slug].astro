@@ -109,8 +109,8 @@ const exportGenerated = new Date(detail.generated).toLocaleDateString("en-US", {
 });
 const summaryText =
   category.children.length > 0
-    ? `${category.name} currently includes ${category.children.length} nested categorie${category.children.length === 1 ? "y" : "s"} and ${category.deviceCount} total mapped device${category.deviceCount === 1 ? "" : "s"} in the export snapshot.`
-    : `${category.name} is a leaf category in the current export snapshot with ${category.deviceCount} mapped device${category.deviceCount === 1 ? "" : "s"}.`;
+    ? `${category.name} includes ${category.children.length} subcategorie${category.children.length === 1 ? "y" : "s"} and ${category.deviceCount} device${category.deviceCount === 1 ? "" : "s"} in total.`
+    : `${category.name} includes ${category.deviceCount} device${category.deviceCount === 1 ? "" : "s"} in this category.`;
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -130,7 +130,7 @@ const initialCatalog = getCatalogResults(
 
 <BaseLayout
   title={`${category.name} | SmartPicker`}
-  description={`${category.name} category page generated from SmartPicker exports.`}
+  description={`${category.name} category page in SmartPicker.`}
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <Breadcrumbs items={breadcrumbItems} />
@@ -145,9 +145,8 @@ const initialCatalog = getCatalogResults(
             {category.name}
           </h1>
           <p class="mt-3 max-w-[860px] text-base leading-relaxed text-secondary">
-            {summaryText} This route is generated directly from the export
-            contract, so richer taxonomy copy can be layered in later without
-            changing the page structure.
+            {summaryText} Use this page to move from broad product types to the
+            devices that fit a specific room, task, or use case.
           </p>
 
           <div class="mt-6 max-w-[760px]">
@@ -170,7 +169,7 @@ const initialCatalog = getCatalogResults(
           <SectionHeader
             eyebrow="Hierarchy"
             title="Subcategories"
-            description="Nested category routes are generated from the same export tree, so this section mirrors the current taxonomy without placeholder copy."
+            description="Use subcategories to narrow your search when you want a more specific product type."
           />
           <div class="grid gap-3 md:grid-cols-2">
             {
@@ -185,7 +184,7 @@ const initialCatalog = getCatalogResults(
                 ))
               ) : (
                 <div class="rounded-2xl border border-theme bg-surface px-5 py-6 text-sm text-muted shadow-card md:col-span-2">
-                  No nested categories are exported beneath this path.
+                  No subcategories are currently listed beneath this category.
                 </div>
               )
             }
@@ -195,8 +194,8 @@ const initialCatalog = getCatalogResults(
         <section class="animate-fade-in">
           <SectionHeader
             eyebrow="Membership"
-            title="Mapped devices"
-            description="Each entry below comes straight from the exported device index. If a device has sparse metadata, the page reflects that rather than guessing."
+            title="Devices in this category"
+            description="Browse the devices currently listed in this category and jump directly into their compatibility details."
           />
           <div class="grid gap-3 md:grid-cols-2">
             {
@@ -211,7 +210,7 @@ const initialCatalog = getCatalogResults(
                 ))
               ) : (
                 <div class="rounded-2xl border border-theme bg-surface px-5 py-6 text-sm text-muted shadow-card md:col-span-2">
-                  No devices are mapped to this category in the current export.
+                  No devices are currently listed in this category.
                 </div>
               )
             }
@@ -232,7 +231,7 @@ const initialCatalog = getCatalogResults(
                 <span class="font-medium text-secondary">{updatedLabel}</span>
               </div>
               <div class="flex justify-between gap-4">
-                <span class="text-muted">Export generated</span>
+                <span class="text-muted">Catalog refreshed</span>
                 <span class="font-medium text-secondary">{exportGenerated}</span>
               </div>
             </div>
@@ -249,7 +248,7 @@ const initialCatalog = getCatalogResults(
       <SectionHeader
         eyebrow="Catalog"
         title={`Browse ${category.name} devices`}
-        description="This scoped category catalog reuses the same client-side filtering flow as the main devices page while keeping the current category locked."
+        description="Browse devices in this category and refine the list by protocol, manufacturer, or key features."
       />
 
       <DeviceCatalogBrowser

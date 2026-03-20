@@ -95,8 +95,8 @@ export function CatalogSidebar({
           Categories <span className="font-mono text-xs text-muted">{categoryCount}</span>
         </h3>
         <div className="rounded-2xl border border-theme bg-surface p-4 text-sm text-muted">
-          Category exports are still empty in this snapshot, so the catalog is currently
-          organized by protocol, manufacturer, and feature flags.
+          Category browsing is still expanding, so the catalog is currently
+          easiest to refine by protocol, manufacturer, and key features.
         </div>
         </section>
       )}

@@ -124,12 +124,12 @@ const formatCount = new Intl.NumberFormat("en-US");
 
 <BaseLayout
   title="Manufacturers | SmartPicker"
-  description="Browse exported smart home device manufacturers by protocol coverage and mapped device counts."
+  description="Browse smart home manufacturers by device count and protocol coverage."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
       title="Manufacturers"
-      description="Browse smart home device manufacturers and see which protocols each brand supports in the current export snapshot. Where the dataset is sparse, the page stays honest and focuses on device counts and protocol distribution."
+      description="Explore brands in the catalog and see how their devices are distributed across protocols and categories."
       stats={[
         { value: formatCount.format(manufacturers.count), label: "Manufacturers" },
         { value: formatCount.format(products.count), label: "Total devices" },

@@ -129,9 +129,9 @@ function CatalogEmptyState({ onReset }: { onReset: () => void }) {
             No matching devices
           </h3>
           <p className="text-muted mt-3 max-w-[760px] text-sm leading-relaxed">
-            This snapshot is pretty small, so a few filters can narrow it down
-            to zero quickly. Clear a filter or broaden the search and the
-            results will repopulate immediately.
+            A few filters can narrow the catalog quickly. Clear one or two
+            filters, or broaden the search, and the results will update
+            immediately.
           </p>
           <button
             type="button"

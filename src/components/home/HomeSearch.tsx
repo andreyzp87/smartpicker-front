@@ -183,7 +183,7 @@ function renderSearchResult(entry: SearchEntry) {
             <div className="truncate text-sm font-semibold">{entry.name}</div>
             <div className="text-muted truncate text-[13px]">
               {entry.deviceCount} device{entry.deviceCount === 1 ? "" : "s"} in
-              this snapshot
+              the catalog
             </div>
           </div>
           <span className="border-theme bg-badge text-secondary inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold">

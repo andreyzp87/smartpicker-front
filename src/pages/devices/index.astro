@@ -79,12 +79,12 @@ const formatCount = new Intl.NumberFormat("en-US");
 
 <BaseLayout
   title="Browse Devices | SmartPicker"
-  description="Browse the SmartPicker device catalog with protocol, manufacturer, and feature filters powered by exported data."
+  description="Browse smart home devices by protocol, manufacturer, and key features with SmartPicker."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
       title="Browse Devices"
-      description="Find compatible smart home devices for your setup. The filters, sorting, and pagination below load a minimal catalog index on the client, then resolve results entirely in the browser."
+      description="Find compatible smart home devices for your setup. Use filters to narrow the catalog by protocol, manufacturer, and features such as local control, Matter certification, and hub requirements."
       stats={[
         { value: formatCount.format(products.count), label: "Devices" },
         { value: formatCount.format(protocols.protocols.length), label: "Protocols" },
