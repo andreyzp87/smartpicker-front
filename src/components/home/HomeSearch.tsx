@@ -358,7 +358,7 @@ export default function HomeSearch({
           {payload && searchResults.totalCount === 0 && (
             <div className="border-theme bg-elevated rounded-2xl border px-4 py-4">
               <p className="text-primary text-sm">
-                No {noResultsLabel} matched "{normalizedQuery}".
+                No {noResultsLabel} matched &quot;{normalizedQuery}&quot;.
               </p>
               <p className="text-muted mt-1 text-sm">
                 Try a manufacturer, model number, hub name, or protocol instead.

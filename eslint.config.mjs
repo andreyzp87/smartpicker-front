@@ -1,7 +1,6 @@
 import js from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import astro from "eslint-plugin-astro";
-import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
@@ -47,10 +46,6 @@ export default [
   {
     files: ["**/*.{jsx,tsx}"],
     ...reactHooks.configs.flat.recommended,
-  },
-  {
-    files: ["**/*.{jsx,tsx}"],
-    ...jsxA11y.flatConfigs.recommended,
   },
   eslintConfigPrettier,
 ];

@@ -6,8 +6,6 @@ import tailwindcss from "@tailwindcss/vite";
 
 import react from "@astrojs/react";
 
-import node from "@astrojs/node";
-
 import partytown from "@astrojs/partytown";
 
 // https://astro.build/config
@@ -17,7 +15,4 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  adapter: node({
-    mode: "standalone",
-  }),
 });

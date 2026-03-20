@@ -11,6 +11,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "cf:pages:dev": "pnpm build && wrangler pages dev dist",
+    "cf:pages:deploy": "pnpm build && wrangler pages deploy dist",
     "astro": "astro",
     "generate-types": "wrangler types",
     "format": "prettier --write .",
@@ -22,7 +24,6 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.1.1",
-    "@astrojs/node": "^10.0.1",
     "@astrojs/partytown": "^2.1.5",
     "@astrojs/react": "^5.0.0",
     "@astrojs/sitemap": "^3.7.1",
