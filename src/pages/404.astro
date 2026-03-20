@@ -1,0 +1,68 @@
+---
+import ButtonLink from "../components/ui/ButtonLink.astro";
+import PageIntro from "../components/ui/PageIntro.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Page Not Found | SmartPicker"
+  description="The page you requested could not be found."
+>
+  <div class="mx-auto max-w-[1200px] px-6 pb-20">
+    <PageIntro
+      eyebrow="404"
+      title="This page wandered off the grid."
+      description="The link may be outdated, the page may have moved, or the address may be incorrect. You can head back home or keep browsing the catalog from here."
+      descriptionClass="max-w-[680px] text-lg"
+    />
+
+    <section class="animate-fade-in">
+      <div class="border-theme bg-surface grid gap-6 rounded-[28px] border p-8 shadow-card md:grid-cols-[1.2fr_0.8fr] md:items-center">
+        <div>
+          <div class="text-gradient font-mono text-[72px] font-bold leading-none tracking-[-0.08em]">
+            404
+          </div>
+          <p class="text-secondary mt-4 max-w-[620px] text-base leading-relaxed">
+            SmartPicker is still private for now, so some links may change while
+            the catalog is taking shape.
+          </p>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <ButtonLink href="/">Go to homepage</ButtonLink>
+            <ButtonLink href="/devices" variant="secondary">
+              Browse devices
+            </ButtonLink>
+            <ButtonLink href="/about" variant="secondary">
+              Learn about the project
+            </ButtonLink>
+          </div>
+        </div>
+
+        <div class="border-theme bg-elevated rounded-[24px] border p-6">
+          <div class="text-muted text-[11px] font-semibold tracking-wider uppercase">
+            Try next
+          </div>
+          <div class="mt-4 flex flex-col gap-3">
+            <a
+              href="/protocols"
+              class="border-theme bg-surface hover:border-theme-hover rounded-2xl border px-4 py-3 text-sm font-medium transition-colors"
+            >
+              Explore supported protocols
+            </a>
+            <a
+              href="/manufacturers"
+              class="border-theme bg-surface hover:border-theme-hover rounded-2xl border px-4 py-3 text-sm font-medium transition-colors"
+            >
+              Browse manufacturers
+            </a>
+            <a
+              href="/hubs"
+              class="border-theme bg-surface hover:border-theme-hover rounded-2xl border px-4 py-3 text-sm font-medium transition-colors"
+            >
+              Compare hubs and platforms
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
