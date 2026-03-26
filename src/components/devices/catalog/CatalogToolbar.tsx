@@ -41,7 +41,7 @@ export function CatalogToolbar({
         <option value="name-desc">Sort: Name Z-A</option>
         <option value="newest">Sort: Newest first</option>
         <option value="manufacturer">Sort: Manufacturer</option>
-        <option value="compatibility">Sort: Most hubs</option>
+        <option value="compatibility">Sort: Most compatible</option>
       </select>
 
       <div className="border-theme flex overflow-hidden rounded-[10px] border">

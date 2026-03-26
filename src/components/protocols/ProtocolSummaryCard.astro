@@ -1,10 +1,5 @@
 ---
-import { getProtocolStyle, joinClasses, sentenceCase } from "../../lib/ui";
-
-interface StatusEntry {
-  status: string;
-  count: number;
-}
+import { getProtocolStyle, joinClasses } from "../../lib/ui";
 
 interface Props {
   href: string;
@@ -12,11 +7,10 @@ interface Props {
   name: string;
   description: string;
   deviceCount: string;
-  manufacturerCount: string;
-  mappedHubCount: string;
-  supportingHubCount: string;
+  integrationCount: string;
+  platformCount: string;
+  hubCount: string;
   deviceShare: number;
-  statusEntries: StatusEntry[];
 }
 
 const {
@@ -25,11 +19,10 @@ const {
   name,
   description,
   deviceCount,
-  manufacturerCount,
-  mappedHubCount,
-  supportingHubCount,
+  integrationCount,
+  platformCount,
+  hubCount,
   deviceShare,
-  statusEntries,
 } = Astro.props;
 
 const style = getProtocolStyle(slug);
@@ -67,32 +60,16 @@ const style = getProtocolStyle(slug);
 
   <div class="grid grid-cols-3 gap-3">
     <div class="flex flex-col gap-0.5">
-      <span class="font-mono text-base font-bold text-primary">{manufacturerCount}</span>
-      <span class="text-[11px] tracking-wider uppercase text-muted">Brands</span>
+      <span class="font-mono text-base font-bold text-primary">{integrationCount}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Integrations</span>
     </div>
     <div class="flex flex-col gap-0.5">
-      <span class="font-mono text-base font-bold text-primary">{mappedHubCount}</span>
-      <span class="text-[11px] tracking-wider uppercase text-muted">Mapped hubs</span>
+      <span class="font-mono text-base font-bold text-primary">{platformCount}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Platforms</span>
     </div>
     <div class="flex flex-col gap-0.5">
-      <span class="font-mono text-base font-bold text-primary">{supportingHubCount}</span>
-      <span class="text-[11px] tracking-wider uppercase text-muted">Declaring hubs</span>
+      <span class="font-mono text-base font-bold text-primary">{hubCount}</span>
+      <span class="text-[11px] tracking-wider uppercase text-muted">Hubs</span>
     </div>
-  </div>
-
-  <div class="flex flex-wrap gap-2">
-    {
-      statusEntries.length > 0 ? (
-        statusEntries.map((entry) => (
-          <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
-            {sentenceCase(entry.status)} {entry.count}
-          </span>
-        ))
-      ) : (
-        <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
-          No devices listed yet
-        </span>
-      )
-    }
   </div>
 </a>

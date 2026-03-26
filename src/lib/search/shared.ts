@@ -1,21 +1,45 @@
 import type { CatalogProduct } from "../catalog/shared";
 
-export type SearchEntityType = "device" | "hub" | "manufacturer";
+export type SearchEntityType =
+  | "device"
+  | "integration"
+  | "platform"
+  | "hub"
+  | "manufacturer";
 
 export interface SearchCountsByType {
   device: number;
+  integration: number;
+  platform: number;
   hub: number;
   manufacturer: number;
 }
 
 export interface SearchDevice extends CatalogProduct {
   entityType: "device";
-  manufacturerSlug: string | null;
-  categoryPath: string | null;
-  cloudDependent: boolean | null;
-  requiresHub: boolean | null;
-  matterCertified: boolean | null;
-  compatibleHubSlugs: string[];
+}
+
+export interface SearchIntegration {
+  entityType: "integration";
+  slug: string;
+  name: string;
+  manufacturerName: string | null;
+  primaryProtocol: string | null;
+  integrationKind: string;
+  platformCount: number;
+  compatibleDeviceCount: number;
+  searchText: string;
+}
+
+export interface SearchPlatform {
+  entityType: "platform";
+  slug: string;
+  name: string;
+  manufacturerName: string | null;
+  kind: string;
+  integrationCount: number;
+  compatibleDeviceCount: number;
+  searchText: string;
 }
 
 export interface SearchHub {
@@ -23,8 +47,7 @@ export interface SearchHub {
   slug: string;
   name: string;
   manufacturerName: string | null;
-  protocolsSupported: string[];
-  deviceCount: number;
+  compatibleDeviceCount: number;
   searchText: string;
 }
 
@@ -36,7 +59,12 @@ export interface SearchManufacturer {
   searchText: string;
 }
 
-export type SearchEntry = SearchDevice | SearchHub | SearchManufacturer;
+export type SearchEntry =
+  | SearchDevice
+  | SearchIntegration
+  | SearchPlatform
+  | SearchHub
+  | SearchManufacturer;
 
 export interface SearchPayload {
   entries: SearchEntry[];

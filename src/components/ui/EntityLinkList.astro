@@ -1,0 +1,145 @@
+---
+import InfoRowLink from "./InfoRowLink.astro";
+import SidebarPanel from "./SidebarPanel.astro";
+
+export interface EntityLinkListItem {
+  href: string;
+  label: string;
+  meta?: string;
+  icon?: string;
+  count?: string;
+  external?: boolean;
+}
+
+interface Props {
+  title?: string;
+  items: EntityLinkListItem[];
+  emptyText: string;
+  variant?: "sidebar" | "content";
+  class?: string;
+}
+
+const {
+  title,
+  items,
+  emptyText,
+  variant = "sidebar",
+  class: className,
+} = Astro.props;
+
+const plainLinkClass = [
+  "border-theme bg-elevated text-primary flex min-h-16 items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition-all hover:-translate-y-0.5 hover:border-theme-hover",
+  variant === "sidebar" && "font-medium",
+]
+  .filter(Boolean)
+  .join(" ");
+const emptyStateClass =
+  "border-theme bg-surface text-muted rounded-2xl border px-5 py-6 text-sm";
+const listClasses =
+  variant === "content" ? "grid gap-3 md:grid-cols-2" : "flex flex-col gap-3";
+const useInfoRowLink = (item: EntityLinkListItem) =>
+  Boolean(item.icon && item.meta);
+---
+
+{
+  variant === "sidebar" && title ? (
+    <SidebarPanel title={title} compact class={className}>
+      {items.length > 0 ? (
+        <div class={listClasses}>
+          {items.map((item) =>
+            useInfoRowLink(item) ? (
+              <InfoRowLink
+                href={item.href}
+                icon={item.icon!}
+                title={item.label}
+                meta={item.meta!}
+                count={item.count}
+              />
+            ) : (
+              <a
+                href={item.href}
+                rel={item.external ? "noreferrer" : undefined}
+                target={item.external ? "_blank" : undefined}
+                class={plainLinkClass}
+              >
+                {item.icon && (
+                  <span class="bg-surface text-muted inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold">
+                    {item.icon}
+                  </span>
+                )}
+                <span class="min-w-0 flex-1">
+                  <span class="text-primary block truncate font-semibold">
+                    {item.label}
+                  </span>
+                  {item.meta && (
+                    <span class="text-muted mt-0.5 block text-xs">
+                      {item.meta}
+                    </span>
+                  )}
+                </span>
+                {item.count && (
+                  <span class="text-primary font-mono text-sm font-semibold">
+                    {item.count}
+                  </span>
+                )}
+              </a>
+            ),
+          )}
+        </div>
+      ) : (
+        <div class={emptyStateClass}>{emptyText}</div>
+      )}
+    </SidebarPanel>
+  ) : (
+    <div class:list={[listClasses, className]}>
+      {items.length > 0 ? (
+        items.map((item) =>
+          useInfoRowLink(item) ? (
+            <InfoRowLink
+              href={item.href}
+              icon={item.icon!}
+              title={item.label}
+              meta={item.meta!}
+              count={item.count}
+            />
+          ) : (
+            <a
+              href={item.href}
+              rel={item.external ? "noreferrer" : undefined}
+              target={item.external ? "_blank" : undefined}
+              class={plainLinkClass}
+            >
+              {item.icon && (
+                <span class="bg-surface text-muted inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold">
+                  {item.icon}
+                </span>
+              )}
+              <span class="min-w-0 flex-1">
+                <span class="text-primary block truncate font-semibold">
+                  {item.label}
+                </span>
+                {item.meta && (
+                  <span class="text-muted mt-0.5 block text-xs">
+                    {item.meta}
+                  </span>
+                )}
+              </span>
+              {item.count && (
+                <span class="text-primary font-mono text-sm font-semibold">
+                  {item.count}
+                </span>
+              )}
+            </a>
+          ),
+        )
+      ) : (
+        <div
+          class={emptyStateClass}
+          style={variant === "content" ? "grid-column: 1 / -1;" : undefined}
+        >
+          {emptyText}
+        </div>
+      )}
+    </div>
+  )
+}

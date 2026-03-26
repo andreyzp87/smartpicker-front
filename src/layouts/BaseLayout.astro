@@ -10,13 +10,15 @@ interface Props {
 
 const {
   title = "SmartPicker",
-  description = "Smart home device compatibility, protocols, and hub support in one searchable catalog.",
+  description = "Smart home device compatibility across integrations, platforms, and commercial hubs in one searchable catalog.",
 } = Astro.props;
 
 const pathname = Astro.url.pathname;
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/devices", label: "Devices" },
+  { href: "/integrations", label: "Integrations" },
+  { href: "/platforms", label: "Platforms" },
   { href: "/hubs", label: "Hubs" },
   { href: "/protocols", label: "Protocols" },
   { href: "/manufacturers", label: "Manufacturers" },
@@ -26,6 +28,8 @@ const navItems = [
 const footerBrowseLinks = [
   { href: "/", label: "Home" },
   { href: "/devices", label: "All Devices" },
+  { href: "/integrations", label: "Integrations" },
+  { href: "/platforms", label: "Platforms" },
   { href: "/hubs", label: "Hubs" },
   { href: "/protocols", label: "Protocols" },
   { href: "/manufacturers", label: "Manufacturers" },
@@ -34,7 +38,6 @@ const footerBrowseLinks = [
 const footerProjectLinks = [
   { href: "/about", label: "About" },
   { href: "/about", label: "Data Sources" },
-  { href: "/about", label: "Roadmap" },
 ];
 
 function isActivePath(path: string): boolean {

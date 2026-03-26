@@ -1,13 +1,16 @@
 ---
-import DeviceCatalogBrowser from "../../components/devices/DeviceCatalogBrowser";
+import CatalogSection from "../../components/devices/CatalogSection.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
 import ButtonLink from "../../components/ui/ButtonLink.astro";
-import InfoRowLink from "../../components/ui/InfoRowLink.astro";
+import DetailSidebarCard from "../../components/ui/DetailSidebarCard.astro";
+import EntityDetailHero from "../../components/ui/EntityDetailHero.astro";
+import EntityLinkList from "../../components/ui/EntityLinkList.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
-import SidebarPanel from "../../components/ui/SidebarPanel.astro";
-import StatGrid from "../../components/ui/StatGrid.astro";
-import { createDefaultCatalogState, getCatalogResults } from "../../lib/catalog/core";
+import {
+  createDefaultCatalogState,
+  getCatalogResults,
+} from "../../lib/catalog/core";
 import { getCatalogPayload } from "../../lib/catalog/server";
 import { readExportJson } from "../../lib/exports";
 import { formatProtocolLabel } from "../../lib/ui";
@@ -61,18 +64,22 @@ interface ProductsExport {
 }
 
 export async function getStaticPaths() {
-  const paths = await readExportJson<CategoryPathsExport>("categories/paths.json");
+  const paths = await readExportJson<CategoryPathsExport>(
+    "categories/paths.json",
+  );
 
   return paths.categories.map((category) => ({
     params: {
-      slug: category.pathSegments,
+      slug: category.path,
     },
   }));
 }
 
 const slugSegments = Array.isArray(Astro.params.slug)
   ? Astro.params.slug.filter(Boolean)
-  : [];
+  : typeof Astro.params.slug === "string"
+    ? Astro.params.slug.split("/").filter(Boolean)
+    : [];
 
 if (slugSegments.length === 0) {
   throw new Error("Missing category slug.");
@@ -126,6 +133,18 @@ const initialCatalog = getCatalogResults(
   { categories: [category.path] },
   12,
 );
+const subcategoryItems = category.children.map((child) => ({
+  href: `/categories/${[...category.pathSegments, child.slug].join("/")}`,
+  label: child.name,
+  icon: "#",
+  meta: child.slug,
+}));
+const categoryDeviceItems = mappedProducts.map((product) => ({
+  href: `/devices/${product.slug}`,
+  label: product.name,
+  icon: product.model?.slice(0, 2).toUpperCase() ?? "SP",
+  meta: `${product.manufacturer?.name ?? "Unknown manufacturer"} · ${product.model ?? "Model TBD"}${product.primaryProtocol ? ` · ${formatProtocolLabel(product.primaryProtocol)}` : ""}`,
+}));
 ---
 
 <BaseLayout
@@ -135,33 +154,28 @@ const initialCatalog = getCatalogResults(
   <div class="mx-auto max-w-[1200px] px-6">
     <Breadcrumbs items={breadcrumbItems} />
 
-    <section class="animate-fade-in py-8 pb-6">
-      <div class="flex items-center gap-6 max-md:flex-col max-md:items-start">
-        <div class="flex h-20 w-20 items-center justify-center rounded-[28px] bg-elevated text-2xl font-bold tracking-[-0.05em] text-secondary">
-          #
-        </div>
-        <div class="min-w-0 flex-1">
-          <h1 class="text-[clamp(34px,4vw,48px)] font-bold leading-[1.05] tracking-[-0.035em]">
-            {category.name}
-          </h1>
-          <p class="mt-3 max-w-[860px] text-base leading-relaxed text-secondary">
-            {summaryText} Use this page to move from broad product types to the
-            devices that fit a specific room, task, or use case.
-          </p>
-
-          <div class="mt-6 max-w-[760px]">
-            <StatGrid
-              columnsClass="grid-cols-3 max-md:grid-cols-1"
-              items={[
-                { value: formatCount.format(category.deviceCount), label: "Total devices" },
-                { value: formatCount.format(category.directDeviceCount), label: "Direct devices" },
-                { value: formatCount.format(category.children.length), label: "Children" },
-              ]}
-            />
-          </div>
-        </div>
-      </div>
-    </section>
+    <EntityDetailHero
+      class="animate-fade-in"
+      icon="#"
+      title={category.name}
+      description={`${summaryText} Use this page to move from broad product types to the devices that fit a specific room, task, or use case.`}
+      statsWrapperClass="max-w-[760px]"
+      statsColumnsClass="grid-cols-3 max-md:grid-cols-1"
+      stats={[
+        {
+          value: formatCount.format(category.deviceCount),
+          label: "Total devices",
+        },
+        {
+          value: formatCount.format(category.directDeviceCount),
+          label: "Direct devices",
+        },
+        {
+          value: formatCount.format(category.children.length),
+          label: "Children",
+        },
+      ]}
+    />
 
     <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div class="flex flex-col gap-6">
@@ -171,24 +185,11 @@ const initialCatalog = getCatalogResults(
             title="Subcategories"
             description="Use subcategories to narrow your search when you want a more specific product type."
           />
-          <div class="grid gap-3 md:grid-cols-2">
-            {
-              category.children.length > 0 ? (
-                category.children.map((child) => (
-                  <InfoRowLink
-                    href={`/categories/${[...category.pathSegments, child.slug].join("/")}`}
-                    icon="#"
-                    title={child.name}
-                    meta={child.slug}
-                  />
-                ))
-              ) : (
-                <div class="rounded-2xl border border-theme bg-surface px-5 py-6 text-sm text-muted shadow-card md:col-span-2">
-                  No subcategories are currently listed beneath this category.
-                </div>
-              )
-            }
-          </div>
+          <EntityLinkList
+            items={subcategoryItems}
+            emptyText="No subcategories are currently listed beneath this category."
+            variant="content"
+          />
         </section>
 
         <section class="animate-fade-in">
@@ -197,45 +198,34 @@ const initialCatalog = getCatalogResults(
             title="Devices in this category"
             description="Browse the devices currently listed in this category and jump directly into their compatibility details."
           />
-          <div class="grid gap-3 md:grid-cols-2">
-            {
-              mappedProducts.length > 0 ? (
-                mappedProducts.map((product) => (
-                  <InfoRowLink
-                    href={`/devices/${product.slug}`}
-                    icon={product.model?.slice(0, 2).toUpperCase() ?? "SP"}
-                    title={product.name}
-                    meta={`${product.manufacturer?.name ?? "Unknown manufacturer"} · ${product.model ?? "Model TBD"}${product.primaryProtocol ? ` · ${formatProtocolLabel(product.primaryProtocol)}` : ""}`}
-                  />
-                ))
-              ) : (
-                <div class="rounded-2xl border border-theme bg-surface px-5 py-6 text-sm text-muted shadow-card md:col-span-2">
-                  No devices are currently listed in this category.
-                </div>
-              )
-            }
-          </div>
+          <EntityLinkList
+            items={categoryDeviceItems}
+            emptyText="No devices are currently listed in this category."
+            variant="content"
+          />
         </section>
       </div>
 
       <aside class="flex flex-col gap-6 max-lg:order-first">
         <div class="animate-fade-in" style="animation-delay:0.1s">
-          <SidebarPanel title="Category Info">
-            <div class="flex flex-col gap-3 text-sm">
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Path</span>
-                <span class="font-medium font-mono text-secondary">{category.path}</span>
-              </div>
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Updated</span>
-                <span class="font-medium text-secondary">{updatedLabel}</span>
-              </div>
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Catalog refreshed</span>
-                <span class="font-medium text-secondary">{exportGenerated}</span>
-              </div>
-            </div>
-          </SidebarPanel>
+          <DetailSidebarCard
+            title="Category Info"
+            rows={[
+              {
+                label: "Path",
+                value: category.path,
+                mono: true,
+              },
+              {
+                label: "Updated",
+                value: updatedLabel,
+              },
+              {
+                label: "Catalog refreshed",
+                value: exportGenerated,
+              },
+            ]}
+          />
         </div>
 
         <ButtonLink href="/devices" variant="secondary" class="justify-center">
@@ -244,33 +234,30 @@ const initialCatalog = getCatalogResults(
       </aside>
     </div>
 
-    <section class="mt-12 border-t border-theme py-12">
-      <SectionHeader
-        eyebrow="Catalog"
-        title={`Browse ${category.name} devices`}
-        description="Browse devices in this category and refine the list by protocol, manufacturer, or key features."
-      />
-
-      <DeviceCatalogBrowser
-        client:load
-        catalogEndpoint="/catalog.json"
-        pageSize={12}
-        autoloadMode="scroll"
-        protocols={catalogPayload.facets.protocols}
-        manufacturers={catalogPayload.facets.manufacturers}
-        categoryCount={catalogPayload.facets.categories.length}
-        featureCounts={featureCounts}
-        hiddenSections={{ categories: true }}
-        lockedFilters={{ categories: [category.path] }}
-        initialRender={{
-          products: initialCatalog.pagedProducts,
-          totalCount: initialCatalog.filteredProducts.length,
-          totalPages: initialCatalog.totalPages,
-          page: initialCatalog.safePage,
-          from: initialCatalog.from,
-          to: initialCatalog.to,
-        }}
-      />
-    </section>
+    <CatalogSection
+      title={`Browse ${category.name} devices`}
+      description="Browse devices in this category and refine the list by protocol, manufacturer, or key features."
+      initialCatalog={{
+        products: initialCatalog.pagedProducts,
+        totalCount: initialCatalog.filteredProducts.length,
+        totalPages: initialCatalog.totalPages,
+        page: initialCatalog.safePage,
+        from: initialCatalog.from,
+        to: initialCatalog.to,
+      }}
+      initialFacets={{
+        protocols: catalogPayload.facets.protocols,
+        manufacturers: catalogPayload.facets.manufacturers,
+        categories: catalogPayload.facets.categories,
+        integrations: catalogPayload.facets.integrations,
+        platforms: catalogPayload.facets.platforms,
+        hubs: catalogPayload.facets.hubs,
+        featureCounts,
+      }}
+      uiConfig={{
+        hiddenSections: { categories: true },
+        lockedFilters: { categories: [category.path] },
+      }}
+    />
   </div>
 </BaseLayout>

@@ -1,0 +1,46 @@
+---
+import EntityMiniCard from "./EntityMiniCard.astro";
+import SectionEmptyCard from "./SectionEmptyCard.astro";
+import SectionHeader from "./SectionHeader.astro";
+
+interface EntityCardItem {
+  href?: string;
+  title: string;
+  meta?: string | null;
+}
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  items: EntityCardItem[];
+  columns?: 2 | 3;
+  emptyTitle?: string;
+  emptyText?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  description,
+  items,
+  columns = 2,
+  emptyTitle,
+  emptyText,
+} = Astro.props;
+
+const gridCols = columns === 3 ? "md:grid-cols-3" : "md:grid-cols-2";
+---
+
+<section>
+  <SectionHeader eyebrow={eyebrow} title={title} description={description} />
+  <div class:list={["grid gap-3", gridCols]}>
+    {
+      items.length > 0 ? (
+        items.map((item) => <EntityMiniCard {...item} />)
+      ) : emptyText ? (
+        <SectionEmptyCard title={emptyTitle} text={emptyText} />
+      ) : null
+    }
+  </div>
+</section>

@@ -103,6 +103,46 @@ export function useCatalogState() {
     });
   }
 
+  function toggleCategory(value: string) {
+    startTransition(() => {
+      setState((current) => ({
+        ...current,
+        categories: toggleStringValue(current.categories, value),
+        page: 1,
+      }));
+    });
+  }
+
+  function toggleIntegration(value: string) {
+    startTransition(() => {
+      setState((current) => ({
+        ...current,
+        integrations: toggleStringValue(current.integrations, value),
+        page: 1,
+      }));
+    });
+  }
+
+  function togglePlatform(value: string) {
+    startTransition(() => {
+      setState((current) => ({
+        ...current,
+        platforms: toggleStringValue(current.platforms, value),
+        page: 1,
+      }));
+    });
+  }
+
+  function toggleHub(value: string) {
+    startTransition(() => {
+      setState((current) => ({
+        ...current,
+        hubs: toggleStringValue(current.hubs, value),
+        page: 1,
+      }));
+    });
+  }
+
   function clearChip(chip: ActiveChip) {
     startTransition(() => {
       setState((current) => {
@@ -134,6 +174,24 @@ export function useCatalogState() {
           return {
             ...current,
             categories: current.categories.filter((value) => value !== chip.value),
+            page: 1,
+          };
+        }
+
+        if (chip.kind === "integration") {
+          return {
+            ...current,
+            integrations: current.integrations.filter(
+              (value) => value !== chip.value,
+            ),
+            page: 1,
+          };
+        }
+
+        if (chip.kind === "platform") {
+          return {
+            ...current,
+            platforms: current.platforms.filter((value) => value !== chip.value),
             page: 1,
           };
         }
@@ -175,6 +233,10 @@ export function useCatalogState() {
       setPage,
       toggleProtocol,
       toggleManufacturer,
+      toggleCategory,
+      toggleIntegration,
+      togglePlatform,
+      toggleHub,
       toggleFeature,
       clearChip,
       resetFilters,

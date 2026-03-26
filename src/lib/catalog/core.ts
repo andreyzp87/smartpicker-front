@@ -17,6 +17,8 @@ export interface CatalogLockedFilters {
   protocols?: string[];
   manufacturers?: string[];
   categories?: string[];
+  integrations?: string[];
+  platforms?: string[];
   hubs?: string[];
   features?: Partial<Record<CatalogFeatureKey, boolean>>;
 }
@@ -26,6 +28,8 @@ export interface CatalogState {
   protocols: string[];
   manufacturers: string[];
   categories: string[];
+  integrations: string[];
+  platforms: string[];
   hubs: string[];
   features: Record<CatalogFeatureKey, boolean>;
   sort: SortMode;
@@ -40,7 +44,14 @@ export type ActiveChip =
       label: string;
     }
   | {
-      kind: "protocol" | "manufacturer" | "category" | "hub" | "feature";
+      kind:
+        | "protocol"
+        | "manufacturer"
+        | "category"
+        | "integration"
+        | "platform"
+        | "hub"
+        | "feature";
       value: string;
       label: string;
     };
@@ -69,6 +80,8 @@ export function createDefaultCatalogState(): CatalogState {
     protocols: [],
     manufacturers: [],
     categories: [],
+    integrations: [],
+    platforms: [],
     hubs: [],
     features: {
       localControl: false,
@@ -90,6 +103,8 @@ export function isDefaultCatalogState(state: CatalogState) {
     state.protocols.length === 0 &&
     state.manufacturers.length === 0 &&
     state.categories.length === 0 &&
+    state.integrations.length === 0 &&
+    state.platforms.length === 0 &&
     state.hubs.length === 0 &&
     state.features.localControl === defaults.features.localControl &&
     state.features.matterCertified === defaults.features.matterCertified &&
@@ -123,6 +138,8 @@ export function parseCatalogState(search: string): CatalogState {
     protocols: parseMultiValue(params, "protocol"),
     manufacturers: parseMultiValue(params, "manufacturer"),
     categories: parseMultiValue(params, "category"),
+    integrations: parseMultiValue(params, "integration"),
+    platforms: parseMultiValue(params, "platform"),
     hubs: parseMultiValue(params, "hub"),
     features: {
       localControl: params.get("local") === "1",
@@ -164,6 +181,12 @@ export function serializeCatalogState(
   }
   for (const value of state.categories) {
     params.append("category", value);
+  }
+  for (const value of state.integrations) {
+    params.append("integration", value);
+  }
+  for (const value of state.platforms) {
+    params.append("platform", value);
   }
   for (const value of state.hubs) {
     params.append("hub", value);
@@ -298,6 +321,8 @@ export function getCatalogResults(
     facetUnion(state.protocols, payload.filters.protocols),
     facetUnion(state.manufacturers, payload.filters.manufacturers),
     facetUnion(state.categories, payload.filters.categories),
+    facetUnion(state.integrations, payload.filters.integrations),
+    facetUnion(state.platforms, payload.filters.platforms),
     facetUnion(state.hubs, payload.filters.hubs),
   ].filter((group): group is number[] => Boolean(group));
 
@@ -336,6 +361,26 @@ export function getCatalogResults(
       unionOrderedIds(
         [...new Set(lockedFilters.hubs)]
           .map((value) => payload.filters.hubs[value] ?? [])
+          .filter((ids) => ids.length > 0),
+      ),
+    );
+  }
+
+  if (lockedFilters?.integrations?.length) {
+    groups.push(
+      unionOrderedIds(
+        [...new Set(lockedFilters.integrations)]
+          .map((value) => payload.filters.integrations[value] ?? [])
+          .filter((ids) => ids.length > 0),
+      ),
+    );
+  }
+
+  if (lockedFilters?.platforms?.length) {
+    groups.push(
+      unionOrderedIds(
+        [...new Set(lockedFilters.platforms)]
+          .map((value) => payload.filters.platforms[value] ?? [])
           .filter((ids) => ids.length > 0),
       ),
     );
@@ -390,7 +435,12 @@ export function getCatalogResults(
 
       if (state.sort === "compatibility") {
         const byCompatibility =
-          right.compatibleHubCount - left.compatibleHubCount;
+          right.compatibleIntegrationCount * 100 +
+          right.compatiblePlatformCount * 10 +
+          right.compatibleHubCount -
+          (left.compatibleIntegrationCount * 100 +
+            left.compatiblePlatformCount * 10 +
+            left.compatibleHubCount);
 
         if (byCompatibility !== 0) {
           return byCompatibility;

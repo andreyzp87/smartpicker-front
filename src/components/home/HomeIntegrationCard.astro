@@ -1,0 +1,49 @@
+---
+import ProtocolBadge from "../ui/ProtocolBadge.astro";
+import { sentenceCase } from "../../lib/ui";
+
+interface Props {
+  href: string;
+  name: string;
+  primaryProtocol: string | null;
+  integrationKind: string;
+  compatibleDeviceCount: string;
+  platformCount: number;
+}
+
+const {
+  href,
+  name,
+  primaryProtocol,
+  integrationKind,
+  compatibleDeviceCount,
+  platformCount,
+} = Astro.props;
+---
+
+<a
+  href={href}
+  class="card-hover rounded-2xl border border-theme bg-surface p-5 text-primary"
+>
+  <div class="mb-3 flex items-start justify-between gap-3">
+    <div class="flex h-11 w-11 items-center justify-center rounded-[10px] bg-elevated text-sm font-semibold text-muted">
+      IN
+    </div>
+    <ProtocolBadge
+      slug={primaryProtocol}
+      class="px-2 py-0.5 text-[11px] font-semibold uppercase"
+    />
+  </div>
+  <div class="text-base font-semibold">{name}</div>
+  <div class="mt-1 text-[13px] text-muted">
+    {sentenceCase(integrationKind.replace(/_/g, " "))}
+  </div>
+  <div class="mt-4 flex flex-wrap gap-2 text-[11px] text-muted">
+    <span class="rounded-md border border-theme bg-badge px-2 py-1">
+      {compatibleDeviceCount} devices
+    </span>
+    <span class="rounded-md border border-theme bg-badge px-2 py-1">
+      {platformCount} platform{platformCount === 1 ? "" : "s"}
+    </span>
+  </div>
+</a>

@@ -1,7 +1,9 @@
 import type {
   CategoriesResponse,
   HubsResponse,
+  IntegrationsResponse,
   ManufacturersResponse,
+  PlatformsResponse,
   ProductsIndexResponse,
   ProtocolsResponse,
 } from "../../../data/exports/types";
@@ -76,11 +78,21 @@ function deriveCategoryFacets(
 }
 
 async function buildCatalogPayload(): Promise<CatalogPayload> {
-  const [products, protocols, manufacturers, hubs, categories] =
+  const [
+    products,
+    protocols,
+    manufacturers,
+    integrations,
+    platforms,
+    hubs,
+    categories,
+  ] =
     await Promise.all([
       readExportJson<ProductsIndexResponse>("products.json"),
       readExportJson<ProtocolsResponse>("protocols.json"),
       readExportJson<ManufacturersResponse>("manufacturers.json"),
+      readExportJson<IntegrationsResponse>("integrations.json"),
+      readExportJson<PlatformsResponse>("platforms.json"),
       readExportJson<HubsResponse>("hubs.json"),
       readExportJson<CategoriesResponse>("categories.json"),
     ]);
@@ -88,6 +100,8 @@ async function buildCatalogPayload(): Promise<CatalogPayload> {
   const protocolIndex = new Map<string, number[]>();
   const manufacturerIndex = new Map<string, number[]>();
   const categoryIndex = new Map<string, number[]>();
+  const integrationIndex = new Map<string, number[]>();
+  const platformIndex = new Map<string, number[]>();
   const hubIndex = new Map<string, number[]>();
   const categoryNames = new Map<string, string>();
   const featureIndex: Record<CatalogFeatureKey, number[]> = {
@@ -112,14 +126,25 @@ async function buildCatalogPayload(): Promise<CatalogPayload> {
     }
 
     productsById[String(product.id)] = {
+      id: product.id,
       slug: product.slug,
       name: product.name,
+      manufacturerSlug: product.manufacturer?.slug ?? null,
       manufacturerName: product.manufacturer?.name ?? "Unknown manufacturer",
       model: product.model,
       categoryName: product.category?.name ?? null,
+      categoryPath,
       primaryProtocol: product.primaryProtocol,
       localControl: product.localControl,
+      cloudDependent: product.cloudDependent,
+      requiresHub: product.requiresHub,
+      matterCertified: product.matterCertified,
+      compatibleIntegrationCount: product.compatibleIntegrationSlugs.length,
+      compatiblePlatformCount: product.compatiblePlatformSlugs.length,
       compatibleHubCount: product.compatibleHubSlugs.length,
+      compatibleIntegrationSlugs: product.compatibleIntegrationSlugs,
+      compatiblePlatformSlugs: product.compatiblePlatformSlugs,
+      compatibleHubSlugs: product.compatibleHubSlugs,
       compatibilityStatus: product.compatibilityStatuses[0] ?? null,
       updatedAt: Date.parse(product.updatedAt),
       searchText: product.searchText,
@@ -128,6 +153,14 @@ async function buildCatalogPayload(): Promise<CatalogPayload> {
     pushId(protocolIndex, product.primaryProtocol, product.id);
     pushId(manufacturerIndex, product.manufacturer?.slug ?? null, product.id);
     pushId(categoryIndex, categoryPath, product.id);
+
+    for (const integrationSlug of product.compatibleIntegrationSlugs) {
+      pushId(integrationIndex, integrationSlug, product.id);
+    }
+
+    for (const platformSlug of product.compatiblePlatformSlugs) {
+      pushId(platformIndex, platformSlug, product.id);
+    }
 
     for (const hubSlug of product.compatibleHubSlugs) {
       pushId(hubIndex, hubSlug, product.id);
@@ -160,6 +193,8 @@ async function buildCatalogPayload(): Promise<CatalogPayload> {
       protocols: toSortedRecord(protocolIndex),
       manufacturers: toSortedRecord(manufacturerIndex),
       categories: toSortedRecord(categoryIndex),
+      integrations: toSortedRecord(integrationIndex),
+      platforms: toSortedRecord(platformIndex),
       hubs: toSortedRecord(hubIndex),
       features: featureIndex,
     },
@@ -187,14 +222,37 @@ async function buildCatalogPayload(): Promise<CatalogPayload> {
         categoryIndex,
         categoryNames,
       ),
+      integrations: sortFacetOptions(
+        integrations.integrations
+          .map((integration) => ({
+            slug: integration.slug,
+            name: integration.name,
+            count:
+              integrationIndex.get(integration.slug)?.length ??
+              integration.compatibleDeviceCount,
+          }))
+          .filter((integration) => integration.count > 0),
+      ),
+      platforms: sortFacetOptions(
+        platforms.platforms
+          .map((platform) => ({
+            slug: platform.slug,
+            name: platform.name,
+            count:
+              platformIndex.get(platform.slug)?.length ??
+              platform.compatibleDeviceCountDerived,
+          }))
+          .filter((platform) => platform.count > 0),
+      ),
       hubs: sortFacetOptions(
         hubs.hubs
-          .filter((hub) => hub.deviceCount > 0)
           .map((hub) => ({
             slug: hub.slug,
             name: hub.name,
-            count: hub.deviceCount,
-          })),
+            count:
+              hubIndex.get(hub.slug)?.length ?? hub.compatibleDeviceCount,
+          }))
+          .filter((hub) => hub.count > 0),
       ),
       features: (
         Object.keys(CATALOG_FEATURE_LABELS) as CatalogFeatureKey[]

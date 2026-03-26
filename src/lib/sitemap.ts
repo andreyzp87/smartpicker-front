@@ -1,58 +1,18 @@
+import type {
+  CategoryPathsResponse,
+  HubsResponse,
+  IntegrationSlugsResponse,
+  ManufacturerSlugsResponse,
+  PlatformSlugsResponse,
+  ProductSlugsResponse,
+  ProtocolSlugsResponse,
+  SiteResponse,
+} from "../../data/exports/types";
 import { readExportJson } from "./exports";
 
 export interface SitemapEntry {
   path: string;
   lastModified?: string;
-}
-
-interface SiteExport {
-  generated: string;
-}
-
-interface ProductSummary {
-  slug: string;
-  updatedAt: string;
-}
-
-interface ProductsExport {
-  generated: string;
-  products: ProductSummary[];
-}
-
-interface ManufacturerSummary {
-  slug: string;
-}
-
-interface ManufacturersExport {
-  generated: string;
-  manufacturers: ManufacturerSummary[];
-}
-
-interface ProtocolSummary {
-  slug: string;
-}
-
-interface ProtocolsExport {
-  generated: string;
-  protocols: ProtocolSummary[];
-}
-
-interface HubSummary {
-  slug: string;
-}
-
-interface HubsExport {
-  generated: string;
-  hubs: HubSummary[];
-}
-
-interface CategoryPathEntry {
-  path: string;
-}
-
-interface CategoryPathsExport {
-  generated: string;
-  categories: CategoryPathEntry[];
 }
 
 function normalizeLastModified(
@@ -81,59 +41,64 @@ function normalizePath(path: string): string {
 }
 
 export async function getSitemapEntries(): Promise<SitemapEntry[]> {
-  const [site, products, manufacturers, protocols, hubs, categoryPaths] =
-    await Promise.all([
-      readExportJson<SiteExport>("site.json"),
-      readExportJson<ProductsExport>("products.json"),
-      readExportJson<ManufacturersExport>("manufacturers.json"),
-      readExportJson<ProtocolsExport>("protocols.json"),
-      readExportJson<HubsExport>("hubs.json"),
-      readExportJson<CategoryPathsExport>("categories/paths.json"),
-    ]);
+  const [
+    site,
+    productSlugs,
+    manufacturerSlugs,
+    protocolSlugs,
+    integrationSlugs,
+    platformSlugs,
+    hubs,
+    categoryPaths,
+  ] = await Promise.all([
+    readExportJson<SiteResponse>("site.json"),
+    readExportJson<ProductSlugsResponse>("products/slugs.json"),
+    readExportJson<ManufacturerSlugsResponse>("manufacturers/slugs.json"),
+    readExportJson<ProtocolSlugsResponse>("protocols/slugs.json"),
+    readExportJson<IntegrationSlugsResponse>("integrations/slugs.json"),
+    readExportJson<PlatformSlugsResponse>("platforms/slugs.json"),
+    readExportJson<HubsResponse>("hubs.json"),
+    readExportJson<CategoryPathsResponse>("categories/paths.json"),
+  ]);
 
   const staticLastModified = normalizeLastModified(site.generated);
-  const collectionLastModified = {
-    products: normalizeLastModified(products.generated) ?? staticLastModified,
-    manufacturers:
-      normalizeLastModified(manufacturers.generated) ?? staticLastModified,
-    protocols: normalizeLastModified(protocols.generated) ?? staticLastModified,
-    hubs: normalizeLastModified(hubs.generated) ?? staticLastModified,
-    categories:
-      normalizeLastModified(categoryPaths.generated) ?? staticLastModified,
-  };
-
   const entries: SitemapEntry[] = [
     { path: "/", lastModified: staticLastModified },
     { path: "/about", lastModified: staticLastModified },
-    { path: "/devices", lastModified: collectionLastModified.products },
-    {
-      path: "/manufacturers",
-      lastModified: collectionLastModified.manufacturers,
-    },
-    { path: "/protocols", lastModified: collectionLastModified.protocols },
-    { path: "/hubs", lastModified: collectionLastModified.hubs },
-    { path: "/categories", lastModified: collectionLastModified.categories },
-    ...products.products.map((product) => ({
-      path: `/devices/${product.slug}`,
-      lastModified:
-        normalizeLastModified(product.updatedAt) ??
-        collectionLastModified.products,
+    { path: "/devices", lastModified: staticLastModified },
+    { path: "/integrations", lastModified: staticLastModified },
+    { path: "/platforms", lastModified: staticLastModified },
+    { path: "/hubs", lastModified: staticLastModified },
+    { path: "/manufacturers", lastModified: staticLastModified },
+    { path: "/protocols", lastModified: staticLastModified },
+    { path: "/categories", lastModified: staticLastModified },
+    ...productSlugs.slugs.map((slug) => ({
+      path: `/devices/${slug}`,
+      lastModified: staticLastModified,
     })),
-    ...manufacturers.manufacturers.map((manufacturer) => ({
-      path: `/manufacturers/${manufacturer.slug}`,
-      lastModified: collectionLastModified.manufacturers,
+    ...manufacturerSlugs.slugs.map((slug) => ({
+      path: `/manufacturers/${slug}`,
+      lastModified: staticLastModified,
     })),
-    ...protocols.protocols.map((protocol) => ({
-      path: `/protocols/${protocol.slug}`,
-      lastModified: collectionLastModified.protocols,
+    ...protocolSlugs.slugs.map((slug) => ({
+      path: `/protocols/${slug}`,
+      lastModified: staticLastModified,
+    })),
+    ...integrationSlugs.slugs.map((slug) => ({
+      path: `/integrations/${slug}`,
+      lastModified: staticLastModified,
+    })),
+    ...platformSlugs.slugs.map((slug) => ({
+      path: `/platforms/${slug}`,
+      lastModified: staticLastModified,
     })),
     ...hubs.hubs.map((hub) => ({
       path: `/hubs/${hub.slug}`,
-      lastModified: collectionLastModified.hubs,
+      lastModified: normalizeLastModified(hub.updatedAt) ?? staticLastModified,
     })),
     ...categoryPaths.categories.map((category) => ({
       path: `/categories/${category.path}`,
-      lastModified: collectionLastModified.categories,
+      lastModified: staticLastModified,
     })),
   ];
 

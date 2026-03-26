@@ -1,0 +1,16 @@
+---
+interface Props {
+  title?: string;
+  text: string;
+}
+
+const { title, text } = Astro.props;
+---
+
+<div
+  class="border-theme bg-surface text-muted rounded-2xl border px-5 py-6 text-sm"
+  style="grid-column: 1 / -1;"
+>
+  {title && <div class="text-primary mb-1 font-semibold">{title}</div>}
+  <p class="leading-relaxed">{text}</p>
+</div>

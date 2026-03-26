@@ -1,87 +1,35 @@
 ---
-import DeviceCatalogBrowser from "../../components/devices/DeviceCatalogBrowser";
+import type {
+  HubsResponse,
+  IntegrationsResponse,
+  PlatformsResponse,
+  ProductsIndexResponse,
+  ProtocolDetailResponse,
+  ProtocolSlugsResponse,
+} from "../../../data/exports/types";
+import CatalogSection from "../../components/devices/CatalogSection.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
+import EntityDetailHero from "../../components/ui/EntityDetailHero.astro";
+import EntityCardGridSection from "../../components/ui/EntityCardGridSection.astro";
 import EmptyState from "../../components/ui/EmptyState.astro";
+import MetricCardGrid from "../../components/ui/MetricCardGrid.astro";
 import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
-import { createDefaultCatalogState, getCatalogResults } from "../../lib/catalog/core";
+import {
+  createDefaultCatalogState,
+  getCatalogResults,
+} from "../../lib/catalog/core";
 import { getCatalogPayload } from "../../lib/catalog/server";
 import { readExportJson } from "../../lib/exports";
-import {
-  formatProtocolLabel,
-  getProtocolStyle,
-  sentenceCase,
-} from "../../lib/ui";
-
-interface EntityRef {
-  slug: string;
-  name: string;
-}
-
-interface ProtocolSlugsExport {
-  slugs: string[];
-}
-
-interface ProtocolDetailExport {
-  generated: string;
-  protocol: {
-    slug: string;
-    name: string;
-    title: string;
-    description: string;
-    deviceCount: number;
-    localControlCount: number;
-    cloudDependentCount: number;
-    matterCertifiedCount: number;
-    updatedAt: string | null;
-    deviceSlugs: string[];
-  };
-}
-
-interface ProductSummary {
-  slug: string;
-  name: string;
-  model: string | null;
-  manufacturer: EntityRef | null;
-  primaryProtocol: string | null;
-  localControl: boolean | null;
-  cloudDependent: boolean | null;
-  matterCertified: boolean | null;
-  compatibleHubSlugs: string[];
-  compatibilityStatuses: string[];
-}
-
-interface ProductsExport {
-  products: ProductSummary[];
-}
-
-interface HubSummary {
-  slug: string;
-  name: string;
-  manufacturer: EntityRef | null;
-  protocolsSupported: string[];
-  deviceCount: number;
-  protocolCounts: Record<string, number>;
-}
-
-interface HubsExport {
-  hubs: HubSummary[];
-}
-
-interface ProtocolSummary {
-  slug: string;
-  name: string;
-  deviceCount: number;
-}
-
-interface ProtocolsExport {
-  protocols: ProtocolSummary[];
-}
+import { getProtocolStyle } from "../../lib/ui";
 
 export async function getStaticPaths() {
-  const slugs = await readExportJson<ProtocolSlugsExport>("protocols/slugs.json");
+  const { slugs } = await readExportJson<ProtocolSlugsResponse>(
+    "protocols/slugs.json",
+  );
 
-  return slugs.slugs.map((slug) => ({
+  return slugs.map((slug) => ({
     params: { slug },
   }));
 }
@@ -92,106 +40,56 @@ if (!slug) {
   throw new Error("Protocol slug is required.");
 }
 
-const protocolExport = await readExportJson<ProtocolDetailExport>(
-  `protocols/${slug}.json`,
-);
-const products = await readExportJson<ProductsExport>("products.json");
-const hubs = await readExportJson<HubsExport>("hubs.json");
-const protocols = await readExportJson<ProtocolsExport>("protocols.json");
-const catalogPayload = await getCatalogPayload();
+const [detail, products, integrations, platforms, hubs, catalogPayload] =
+  await Promise.all([
+    readExportJson<ProtocolDetailResponse>(`protocols/${slug}.json`),
+    readExportJson<ProductsIndexResponse>("products.json"),
+    readExportJson<IntegrationsResponse>("integrations.json"),
+    readExportJson<PlatformsResponse>("platforms.json"),
+    readExportJson<HubsResponse>("hubs.json"),
+    getCatalogPayload(),
+  ]);
 
+const protocol = detail.protocol;
 const productBySlug = new Map(
   products.products.map((product) => [product.slug, product]),
 );
+const integrationBySlug = new Map(
+  integrations.integrations.map((integration) => [
+    integration.slug,
+    integration,
+  ]),
+);
+const platformBySlug = new Map(
+  platforms.platforms.map((platform) => [platform.slug, platform]),
+);
+const hubBySlug = new Map(hubs.hubs.map((hub) => [hub.slug, hub]));
 
-const mappedProducts = protocolExport.protocol.deviceSlugs
+const mappedProducts = protocol.deviceSlugs
   .map((deviceSlug) => productBySlug.get(deviceSlug))
-  .filter((product): product is ProductSummary => Boolean(product))
-  .sort((left, right) => {
-    const leftScore =
-      left.compatibleHubSlugs.length * 10 + left.compatibilityStatuses.length;
-    const rightScore =
-      right.compatibleHubSlugs.length * 10 + right.compatibilityStatuses.length;
-
-    return rightScore === leftScore
-      ? left.name.localeCompare(right.name)
-      : rightScore - leftScore;
-  });
-
-const manufacturerMap = new Map<
-  string,
-  { slug: string; name: string; count: number }
->();
-const statusCounts = mappedProducts.reduce<Record<string, number>>(
-  (counts, product) => {
-    for (const status of product.compatibilityStatuses) {
-      counts[status] = (counts[status] ?? 0) + 1;
-    }
-
-    if (product.manufacturer) {
-      const existing = manufacturerMap.get(product.manufacturer.slug);
-
-      if (existing) {
-        existing.count += 1;
-      } else {
-        manufacturerMap.set(product.manufacturer.slug, {
-          slug: product.manufacturer.slug,
-          name: product.manufacturer.name,
-          count: 1,
-        });
-      }
-    }
-
-    return counts;
-  },
-  {},
-);
-
-const manufacturerBreakdown = [...manufacturerMap.values()].sort((left, right) =>
-  right.count === left.count
-    ? left.name.localeCompare(right.name)
-    : right.count - left.count,
-);
-
-const supportingHubs = hubs.hubs
-  .filter((hub) => hub.protocolsSupported.includes(protocolExport.protocol.slug))
-  .map((hub) => ({
-    ...hub,
-    mappedDeviceCount:
-      hub.protocolCounts[protocolExport.protocol.slug] ??
-      mappedProducts.filter((product) => product.compatibleHubSlugs.includes(hub.slug))
-        .length,
-  }))
-  .sort((left, right) =>
-    right.mappedDeviceCount === left.mappedDeviceCount
-      ? left.name.localeCompare(right.name)
-      : right.mappedDeviceCount - left.mappedDeviceCount,
+  .filter((product): product is ProductsIndexResponse["products"][number] =>
+    Boolean(product),
   );
+const linkedIntegrations = protocol.integrationSlugs
+  .map((integrationSlug) => integrationBySlug.get(integrationSlug))
+  .filter(
+    (
+      integration,
+    ): integration is IntegrationsResponse["integrations"][number] =>
+      Boolean(integration),
+  );
+const linkedPlatforms = protocol.platformSlugs
+  .map((platformSlug) => platformBySlug.get(platformSlug))
+  .filter((platform): platform is PlatformsResponse["platforms"][number] =>
+    Boolean(platform),
+  );
+const linkedHubs = protocol.hubSlugs
+  .map((hubSlug) => hubBySlug.get(hubSlug))
+  .filter((hub): hub is HubsResponse["hubs"][number] => Boolean(hub));
 
-const relatedProtocols = protocols.protocols
-  .filter((protocol) => protocol.slug !== protocolExport.protocol.slug)
-  .sort((left, right) =>
-    right.deviceCount === left.deviceCount
-      ? left.name.localeCompare(right.name)
-      : right.deviceCount - left.deviceCount,
-  )
-  .slice(0, 4);
-
-const formatCount = new Intl.NumberFormat("en-US");
-const style = getProtocolStyle(protocolExport.protocol.slug);
-const generatedLabel = new Date(protocolExport.generated).toLocaleString("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-const updatedLabel = protocolExport.protocol.updatedAt
-  ? new Date(protocolExport.protocol.updatedAt).toLocaleDateString("en-US", {
-      dateStyle: "medium",
-    })
-  : "Awaiting first device-level refresh";
-const summary =
-  mappedProducts.length > 0
-    ? `${protocolExport.protocol.name} currently includes ${formatCount.format(mappedProducts.length)} device${mappedProducts.length === 1 ? "" : "s"} from ${formatCount.format(manufacturerBreakdown.length)} manufacturer${manufacturerBreakdown.length === 1 ? "" : "s"}.`
-    : `${protocolExport.protocol.name} is tracked in SmartPicker, but there are no devices listed under this protocol yet.`;
+const manufacturerCount = new Set(
+  mappedProducts.map((product) => product.manufacturer?.slug).filter(Boolean),
+).size;
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -204,436 +102,192 @@ const initialCatalog = getCatalogResults(
   catalogPayload,
   createDefaultCatalogState(),
   "",
-  { protocols: [protocolExport.protocol.slug] },
+  { protocols: [protocol.slug] },
   12,
 );
+const style = getProtocolStyle(protocol.slug);
+const formatCount = new Intl.NumberFormat("en-US");
+const updatedLabel = protocol.updatedAt
+  ? new Date(protocol.updatedAt).toLocaleDateString("en-US", {
+      dateStyle: "medium",
+    })
+  : "Awaiting first refresh";
+const linkedIntegrationCards = linkedIntegrations.map((integration) => ({
+  href: `/integrations/${integration.slug}`,
+  title: integration.name,
+  meta: `${formatCount.format(integration.compatibleDeviceCount)} compatible devices`,
+}));
+const linkedPlatformCards = linkedPlatforms.map((platform) => ({
+  href: `/platforms/${platform.slug}`,
+  title: platform.name,
+  meta: `${formatCount.format(platform.compatibleDeviceCountDerived)} supported devices`,
+}));
+const linkedHubCards = linkedHubs.map((hub) => ({
+  href: `/hubs/${hub.slug}`,
+  title: hub.name,
+  meta: `${hub.manufacturer?.name ?? "Independent"} · ${formatCount.format(hub.compatibleDeviceCount)} compatible devices`,
+}));
+const snapshotMetrics = [
+  {
+    value: formatCount.format(protocol.deviceCount),
+    label: "Devices",
+  },
+  {
+    value: formatCount.format(manufacturerCount),
+    label: "Manufacturers",
+  },
+  {
+    value: formatCount.format(protocol.integrationCount),
+    label: "Direct integrations",
+  },
+  {
+    value: formatCount.format(protocol.platformCount),
+    label: "Derived platforms",
+  },
+];
 ---
 
 <BaseLayout
-  title={`${protocolExport.protocol.name} | SmartPicker`}
-  description={`${protocolExport.protocol.name} devices, supporting hubs, and manufacturer coverage in SmartPicker.`}
+  title={`${protocol.name} | SmartPicker`}
+  description={`${protocol.name} device, integration, platform, and commercial hub coverage in SmartPicker.`}
 >
   <div class="mx-auto max-w-[1200px] px-6">
-    <nav class="animate-fade-in pt-6 text-sm text-muted">
-      <a href="/" class="transition-colors hover:text-secondary">Home</a>
-      <span class="mx-2">/</span>
-      <a href="/protocols" class="transition-colors hover:text-secondary"
-        >Protocols</a
-      >
-      <span class="mx-2">/</span>
-      <span class="text-secondary">{protocolExport.protocol.name}</span>
-    </nav>
+    <Breadcrumbs
+      items={[
+        { href: "/", label: "Home" },
+        { href: "/protocols", label: "Protocols" },
+        { label: protocol.name },
+      ]}
+    />
 
-    <section class="animate-fade-in py-8 pb-10">
-      <div class="flex items-start gap-8 max-md:flex-col">
-        <div class:list={[
-          "flex h-20 w-20 items-center justify-center rounded-2xl border border-badge text-xl font-bold tracking-[-0.04em]",
+    <EntityDetailHero
+      pretitle="Protocol detail"
+      title={protocol.title}
+      description={protocol.description}
+      stats={[
+        { value: formatCount.format(protocol.deviceCount), label: "Devices" },
+        {
+          value: formatCount.format(protocol.integrationCount),
+          label: "Integrations",
+        },
+        {
+          value: formatCount.format(protocol.platformCount),
+          label: "Platforms",
+        },
+        { value: formatCount.format(protocol.hubCount), label: "Hubs" },
+      ]}
+    >
+      <div
+        slot="icon"
+        class:list={[
+          "border-badge flex h-20 w-20 items-center justify-center rounded-2xl border text-xl font-bold tracking-[-0.04em]",
           style.badge,
           style.text,
-        ]}>
-          {style.shortLabel}
-        </div>
-        <div class="min-w-0 flex-1">
-          <div class="mb-2 text-[13px] font-semibold tracking-wider uppercase text-muted">
-            Protocol detail
-          </div>
-          <h1 class="text-[clamp(34px,4vw,48px)] font-bold leading-[1.05] tracking-[-0.035em]">
-            {protocolExport.protocol.title}
-          </h1>
-          <p class="mt-3 max-w-[760px] text-base leading-relaxed text-secondary">
-            {protocolExport.protocol.description} {summary}
-          </p>
-
-          <div class="mt-4 flex flex-wrap gap-2">
-            <ProtocolBadge slug={protocolExport.protocol.slug} class="rounded-md" />
-            <span class="rounded-md border border-theme bg-badge px-3 py-1 text-[13px] font-medium text-secondary">
-              Catalog refreshed {generatedLabel}
-            </span>
-            <span class="rounded-md border border-theme bg-badge px-3 py-1 text-[13px] font-medium text-secondary">
-              Updated {updatedLabel}
-            </span>
-            {
-              mappedProducts.length === 0 && (
-                <span class="rounded-md border border-amber bg-amber-subtle px-3 py-1 text-[13px] font-medium text-amber">
-                  No mapped devices yet
-                </span>
-              )
-            }
-          </div>
-        </div>
+        ]}
+      >
+        {style.shortLabel}
       </div>
+      <ProtocolBadge slot="badges" slug={protocol.slug} class="rounded-md" />
+      <span
+        slot="badges"
+        class="border-theme bg-badge text-secondary rounded-md border px-3 py-1 text-[13px] font-medium"
+      >
+        Updated {updatedLabel}
+      </span>
+    </EntityDetailHero>
 
-      <div class="mt-7 grid grid-cols-4 gap-3 max-md:grid-cols-2">
-        <div class="rounded-2xl border border-theme bg-surface p-5">
-          <div class="text-gradient text-[28px] font-bold font-mono tracking-tight">
-            {formatCount.format(protocolExport.protocol.deviceCount)}
-          </div>
-          <div class="text-xs font-medium tracking-wider uppercase text-muted">
-            Devices
-          </div>
-        </div>
-        <div class="rounded-2xl border border-theme bg-surface p-5">
-          <div class="text-gradient text-[28px] font-bold font-mono tracking-tight">
-            {formatCount.format(manufacturerBreakdown.length)}
-          </div>
-          <div class="text-xs font-medium tracking-wider uppercase text-muted">
-            Manufacturers
-          </div>
-        </div>
-        <div class="rounded-2xl border border-theme bg-surface p-5">
-          <div class="text-gradient text-[28px] font-bold font-mono tracking-tight">
-            {formatCount.format(supportingHubs.length)}
-          </div>
-          <div class="text-xs font-medium tracking-wider uppercase text-muted">
-            Supporting hubs
-          </div>
-        </div>
-        <div class="rounded-2xl border border-theme bg-surface p-5">
-          <div class="text-gradient text-[28px] font-bold font-mono tracking-tight">
-            {formatCount.format(protocolExport.protocol.matterCertifiedCount)}
-          </div>
-          <div class="text-xs font-medium tracking-wider uppercase text-muted">
-            Matter certified
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="grid gap-5 pb-20 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.9fr)]">
+    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1.55fr)_320px]">
       <div class="flex flex-col gap-6">
         <section>
-          <div class="mb-4 flex items-baseline justify-between gap-4 max-md:flex-col max-md:items-start">
-            <div>
-              <SectionHeader
-                eyebrow="Devices in this protocol"
-                title="Listed devices"
-                description="Browse the devices currently associated with this protocol and compare compatibility signals at a glance."
-              />
-            </div>
-            {
-              mappedProducts.length > 0 && (
-                <a
-                  href={`/devices?protocol=${encodeURIComponent(protocolExport.protocol.slug)}`}
-                  class="text-sm font-medium text-blue transition-colors hover:text-blue/80"
-                >
-                  View in catalog
-                </a>
-              )
-            }
-          </div>
-
-          {
-            mappedProducts.length > 0 ? (
-              <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
-                {
-                  mappedProducts.map((product, index) => (
-                    <article
-                      class="flex flex-col gap-3 rounded-2xl border border-theme bg-surface p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
-                      style={`animation-delay:${0.05 + index * 0.05}s`}
-                    >
-                      <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0 flex-1">
-                          <a
-                            href={`/devices/${product.slug}`}
-                            class="text-lg font-bold tracking-tight text-primary transition-colors hover:text-blue"
-                          >
-                            {product.name}
-                          </a>
-                          <div class="mt-1 text-sm text-muted">
-                            {product.manufacturer ? (
-                              <>
-                                <a
-                                  href={`/manufacturers/${product.manufacturer.slug}`}
-                                  class="font-medium text-secondary transition-colors hover:text-primary"
-                                >
-                                  {product.manufacturer.name}
-                                </a>
-                                {product.model ? ` · ${product.model}` : ""}
-                              </>
-                            ) : (
-                              product.model ?? "Manufacturer pending"
-                            )}
-                          </div>
-                        </div>
-                        <span class="rounded-md border border-blue bg-blue-subtle px-2.5 py-1 text-[11px] font-medium text-blue">
-                          {sentenceCase(product.compatibilityStatuses[0] ?? "reported")}
-                        </span>
-                      </div>
-
-                      <div class="flex flex-wrap gap-2">
-                        <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
-                          {formatCount.format(product.compatibleHubSlugs.length)} hub
-                          {product.compatibleHubSlugs.length === 1 ? "" : "s"}
-                        </span>
-                        {
-                          product.localControl === true && (
-                            <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
-                              Local control
-                            </span>
-                          )
-                        }
-                        {
-                          product.cloudDependent === false && (
-                            <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
-                              No cloud required
-                            </span>
-                          )
-                        }
-                        {
-                          product.matterCertified === true && (
-                            <span class="rounded-md border border-badge bg-badge px-2.5 py-1 text-[11px] font-medium text-secondary">
-                              Matter certified
-                            </span>
-                          )
-                        }
-                      </div>
-                    </article>
-                  ))
-                }
-              </div>
-            ) : (
-              <EmptyState
-                icon={style.shortLabel}
-                title="No devices listed yet"
-                description="There are no devices currently listed under this protocol. Browse the full catalog or check other protocol pages for broader coverage."
-                primaryAction={{ href: "/devices", label: "Browse all devices" }}
-                secondaryAction={{ href: "/protocols", label: "Back to protocols" }}
-              />
-            )
-          }
+          <SectionHeader
+            eyebrow="Coverage"
+            title="Protocol snapshot"
+            description="See how this protocol shows up across devices, brands, and the software ecosystems built around it."
+          />
+          <MetricCardGrid
+            items={snapshotMetrics}
+            tone="accent"
+            gridCols="md:grid-cols-4"
+          />
         </section>
 
-        <section>
-          <SectionHeader eyebrow="Manufacturer coverage" title="Brands in this protocol" />
+        <EntityCardGridSection
+          eyebrow="Integrations"
+          title="Top integrations using this protocol"
+          description="Popular integrations that support devices using this protocol."
+          items={linkedIntegrationCards}
+          emptyText="No integrations are listed for this protocol yet."
+        />
 
-          {
-            manufacturerBreakdown.length > 0 ? (
-              <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
-                {
-                  manufacturerBreakdown.map((manufacturer, index) => (
-                    <a
-                      href={`/manufacturers/${manufacturer.slug}`}
-                      class="flex flex-col gap-3 rounded-2xl border border-theme bg-surface p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
-                      style={`animation-delay:${0.05 + index * 0.05}s`}
-                    >
-                      <div class="flex items-center justify-between gap-3">
-                        <div>
-                          <div class="text-base font-bold tracking-tight">
-                            {manufacturer.name}
-                          </div>
-                          <div class="text-sm text-muted">
-                            {manufacturer.count} device
-                            {manufacturer.count === 1 ? "" : "s"} in this
-                            protocol
-                          </div>
-                        </div>
-                        <span class="font-mono text-lg font-bold text-primary">
-                          {formatCount.format(manufacturer.count)}
-                        </span>
-                      </div>
-                      <div class="h-2 overflow-hidden rounded-full bg-[var(--sp-bar-track)]">
-                        <div
-                          class:list={["h-full rounded-full", style.badge]}
-                          style={`width:${(manufacturer.count / Math.max(mappedProducts.length, 1)) * 100}%`}
-                        >
-                        </div>
-                      </div>
-                    </a>
-                  ))
-                }
-              </div>
-            ) : (
-              <EmptyState
-                icon={style.shortLabel}
-                title="Manufacturer breakdown will appear here"
-                description="Manufacturer coverage will appear here as devices are added to this protocol."
-              />
-            )
-          }
-        </section>
+        <EntityCardGridSection
+          eyebrow="Platforms"
+          title="Platform coverage"
+          description="Platforms appear here when linked integrations expose compatibility through them."
+          items={linkedPlatformCards}
+          emptyText="No platforms are listed for this protocol yet."
+        />
 
-        <section>
-          <SectionHeader eyebrow="Hub coverage" title="Supporting hubs" />
-
-          {
-            supportingHubs.length > 0 ? (
-              <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]">
-                {
-                  supportingHubs.map((hub, index) => (
-                    <a
-                      href={`/hubs/${hub.slug}`}
-                      class="flex flex-col gap-3 rounded-2xl border border-theme bg-surface p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-theme-hover"
-                      style={`animation-delay:${0.05 + index * 0.05}s`}
-                    >
-                      <div class="flex items-center justify-between gap-3">
-                        <div>
-                          <div class="text-base font-bold tracking-tight">
-                            {hub.name}
-                          </div>
-                          <div class="text-sm text-muted">
-                            {hub.manufacturer?.name ?? "Independent hub"}
-                          </div>
-                        </div>
-                        <span class="font-mono text-lg font-bold text-primary">
-                          {formatCount.format(hub.mappedDeviceCount)}
-                        </span>
-                      </div>
-                      <p class="text-sm leading-relaxed text-secondary">
-                        Declares support for {formatProtocolLabel(protocolExport.protocol.slug)}
-                        {" "}and currently maps {hub.mappedDeviceCount} device
-                        {hub.mappedDeviceCount === 1 ? "" : "s"} in this protocol.
-                      </p>
-                    </a>
-                  ))
-                }
-              </div>
-            ) : (
-              <EmptyState
-                icon={style.shortLabel}
-                title="No supporting hubs listed"
-                description="No hubs are currently listed with support for this protocol."
-              />
-            )
-          }
-        </section>
+        <EntityCardGridSection
+          eyebrow="Commercial Hubs"
+          title="Hub counts where relevant"
+          description="Commercial hubs are shown separately, so dedicated ecosystems stay easy to compare."
+          items={linkedHubCards}
+          emptyText="No commercial hubs are listed for this protocol yet."
+        />
       </div>
 
-      <aside class="flex flex-col gap-4">
-        <section class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-          <h3>Key facts</h3>
-          <div class="mt-4 flex flex-col gap-3">
-            <div class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3">
-              <div>
-                <div class="text-sm font-semibold">Local control</div>
-                <div class="text-xs text-muted">
-                  Devices marked for local control
-                </div>
-              </div>
-              <span class="font-mono text-sm text-primary">
-                {formatCount.format(protocolExport.protocol.localControlCount)}
-              </span>
-            </div>
-            <div class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3">
-              <div>
-                <div class="text-sm font-semibold">Cloud dependent</div>
-                <div class="text-xs text-muted">
-                  Devices explicitly marked cloud-based
-                </div>
-              </div>
-              <span class="font-mono text-sm text-primary">
-                {formatCount.format(protocolExport.protocol.cloudDependentCount)}
-              </span>
-            </div>
-            <div class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3">
-              <div>
-                <div class="text-sm font-semibold">Matter certified</div>
-                <div class="text-xs text-muted">
-                  Certified products in this family
-                </div>
-              </div>
-              <span class="font-mono text-sm text-primary">
-                {formatCount.format(protocolExport.protocol.matterCertifiedCount)}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <section class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-          <h3>Compatibility status</h3>
-          {
-            Object.keys(statusCounts).length > 0 ? (
+      <aside class="flex flex-col gap-6">
+        {
+          mappedProducts.length > 0 ? (
+            <div class="border-theme bg-surface rounded-2xl border p-5">
+              <h2 class="text-primary text-lg font-semibold tracking-tight">
+                Sample devices
+              </h2>
               <div class="mt-4 flex flex-col gap-3">
-                {
-                  Object.entries(statusCounts)
-                    .sort((left, right) => right[1] - left[1])
-                    .map(([status, count]) => (
-                      <div class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3">
-                        <div>
-                          <div class="text-sm font-semibold">
-                            {sentenceCase(status)}
-                          </div>
-                          <div class="text-xs text-muted">
-                            Devices currently in this bucket
-                          </div>
-                        </div>
-                        <span class="font-mono text-sm text-primary">
-                          {formatCount.format(count)}
-                        </span>
-                      </div>
-                    ))
-                }
-              </div>
-            ) : (
-              <p class="mt-3 text-sm leading-relaxed text-secondary">
-                No device-level compatibility statuses are available yet because
-                no devices are currently listed under this protocol.
-              </p>
-            )
-          }
-        </section>
-
-        <section class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-          <h3>Related protocols</h3>
-          <div class="mt-4 flex flex-col gap-3">
-            {
-              relatedProtocols.map((protocol) => {
-                const relatedStyle = getProtocolStyle(protocol.slug);
-
-                return (
+                {mappedProducts.slice(0, 6).map((product) => (
                   <a
-                    href={`/protocols/${protocol.slug}`}
-                    class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3 text-primary transition-all hover:-translate-y-0.5 hover:border-theme-hover"
+                    href={`/devices/${product.slug}`}
+                    class="border-theme bg-elevated text-secondary hover:border-theme-hover hover:text-primary rounded-xl border px-4 py-3 text-sm transition-all"
                   >
-                    <div class="flex items-start gap-3">
-                      <span
-                        class={`inline-flex h-8 w-8 items-center justify-center rounded-[10px] text-xs font-bold ${relatedStyle.badge} ${relatedStyle.text}`}
-                      >
-                        {relatedStyle.shortLabel}
-                      </span>
-                      <div>
-                        <div class="text-sm font-semibold">{protocol.name}</div>
-                        <div class="text-xs text-muted">
-                          {formatCount.format(protocol.deviceCount)} mapped
-                          devices
-                        </div>
-                      </div>
-                    </div>
+                    {product.name}
                   </a>
-                );
-              })
-            }
-          </div>
-        </section>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="No devices for this protocol"
+              description="Device coverage for this protocol has not been added yet."
+            />
+          )
+        }
       </aside>
     </div>
 
-    <section class="mt-12 border-t border-theme py-12">
-      <SectionHeader
-        eyebrow="Catalog"
-        title={`Browse ${protocolExport.protocol.name} devices`}
-        description="Browse devices for this protocol and refine the results by manufacturer or key features."
-      />
-
-      <DeviceCatalogBrowser
-        client:load
-        catalogEndpoint="/catalog.json"
-        pageSize={12}
-        autoloadMode="scroll"
-        protocols={catalogPayload.facets.protocols}
-        manufacturers={catalogPayload.facets.manufacturers}
-        categoryCount={catalogPayload.facets.categories.length}
-        featureCounts={featureCounts}
-        hiddenSections={{ protocols: true }}
-        lockedFilters={{ protocols: [protocolExport.protocol.slug] }}
-        initialRender={{
-          products: initialCatalog.pagedProducts,
-          totalCount: initialCatalog.filteredProducts.length,
-          totalPages: initialCatalog.totalPages,
-          page: initialCatalog.safePage,
-          from: initialCatalog.from,
-          to: initialCatalog.to,
-        }}
-      />
-    </section>
+    <CatalogSection
+      title={`Browse ${protocol.name} devices`}
+      description="Browse devices for this protocol and refine the results by manufacturer, category, integration, platform, hub, or key features."
+      initialCatalog={{
+        products: initialCatalog.pagedProducts,
+        totalCount: initialCatalog.filteredProducts.length,
+        totalPages: initialCatalog.totalPages,
+        page: initialCatalog.safePage,
+        from: initialCatalog.from,
+        to: initialCatalog.to,
+      }}
+      initialFacets={{
+        protocols: catalogPayload.facets.protocols,
+        manufacturers: catalogPayload.facets.manufacturers,
+        categories: catalogPayload.facets.categories,
+        integrations: catalogPayload.facets.integrations,
+        platforms: catalogPayload.facets.platforms,
+        hubs: catalogPayload.facets.hubs,
+        featureCounts,
+      }}
+      uiConfig={{
+        hiddenSections: { protocols: true },
+        lockedFilters: { protocols: [protocol.slug] },
+      }}
+    />
   </div>
 </BaseLayout>

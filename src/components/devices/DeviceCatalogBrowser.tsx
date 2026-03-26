@@ -4,7 +4,6 @@ import {
   createDefaultCatalogState,
   isDefaultCatalogState,
   type ActiveChip,
-  type CatalogLockedFilters,
 } from "../../lib/catalog/core";
 import {
   hasCatalogSelectionFilters,
@@ -31,29 +30,41 @@ const defaultCatalogState = createDefaultCatalogState();
 function buildActiveChips(
   payload: ReturnType<typeof useCatalogPayload>["payload"],
   state: ReturnType<typeof useCatalogState>["state"],
-  protocols: DeviceCatalogBrowserProps["protocols"],
-  manufacturers: DeviceCatalogBrowserProps["manufacturers"],
+  initialFacets: DeviceCatalogBrowserProps["initialFacets"],
 ) {
   const protocolNames = Object.fromEntries(
-    (payload?.facets.protocols ?? protocols).map((protocol) => [
+    (payload?.facets.protocols ?? initialFacets.protocols).map((protocol) => [
       protocol.slug,
       protocol.name,
     ]),
   );
   const manufacturerNames = Object.fromEntries(
-    (payload?.facets.manufacturers ?? manufacturers).map((manufacturer) => [
-      manufacturer.slug,
-      manufacturer.name,
-    ]),
+    (payload?.facets.manufacturers ?? initialFacets.manufacturers).map(
+      (manufacturer) => [manufacturer.slug, manufacturer.name],
+    ),
   );
   const categoryNames = Object.fromEntries(
-    (payload?.facets.categories ?? []).map((category) => [
+    (payload?.facets.categories ?? initialFacets.categories).map((category) => [
       category.path,
       category.name,
     ]),
   );
+  const integrationNames = Object.fromEntries(
+    (payload?.facets.integrations ?? initialFacets.integrations).map(
+      (integration) => [integration.slug, integration.name],
+    ),
+  );
+  const platformNames = Object.fromEntries(
+    (payload?.facets.platforms ?? initialFacets.platforms).map((platform) => [
+      platform.slug,
+      platform.name,
+    ]),
+  );
   const hubNames = Object.fromEntries(
-    (payload?.facets.hubs ?? []).map((hub) => [hub.slug, hub.name]),
+    (payload?.facets.hubs ?? initialFacets.hubs).map((hub) => [
+      hub.slug,
+      hub.name,
+    ]),
   );
 
   const chips: ActiveChip[] = [
@@ -71,6 +82,16 @@ function buildActiveChips(
       kind: "category" as const,
       value,
       label: categoryNames[value] ?? value,
+    })),
+    ...state.integrations.map((value) => ({
+      kind: "integration" as const,
+      value,
+      label: integrationNames[value] ?? value,
+    })),
+    ...state.platforms.map((value) => ({
+      kind: "platform" as const,
+      value,
+      label: platformNames[value] ?? value,
     })),
     ...state.hubs.map((value) => ({
       kind: "hub" as const,
@@ -105,18 +126,26 @@ function buildActiveChips(
 }
 
 export default function DeviceCatalogBrowser({
-  catalogEndpoint,
-  searchEndpoint = "/search.json",
-  pageSize = 12,
-  autoloadMode = "idle",
-  protocols,
-  manufacturers,
-  categoryCount,
-  featureCounts,
-  initialRender,
-  hiddenSections,
-  lockedFilters,
-}: DeviceCatalogBrowserProps & { lockedFilters?: CatalogLockedFilters }) {
+  initialCatalog,
+  initialFacets,
+  endpoints,
+  uiConfig,
+}: DeviceCatalogBrowserProps) {
+  const catalogEndpoint = endpoints?.catalog ?? "/catalog.json";
+  const searchEndpoint = endpoints?.search ?? "/search.json";
+  const autoloadMode = endpoints?.autoloadMode ?? "idle";
+  const pageSize = uiConfig?.pageSize ?? 12;
+  const hiddenSections = uiConfig?.hiddenSections;
+  const lockedFilters = uiConfig?.lockedFilters;
+  const {
+    protocols,
+    manufacturers,
+    categories,
+    integrations,
+    platforms,
+    hubs,
+    featureCounts,
+  } = initialFacets;
   const {
     payload: catalogPayload,
     isFetching: isCatalogFetching,
@@ -161,19 +190,17 @@ export default function DeviceCatalogBrowser({
       : null;
   const renderedProducts = activeResults
     ? activeResults.pagedProducts
-    : initialRender.products;
+    : initialCatalog.products;
   const renderedTotalCount = activeResults
     ? activeResults.filteredProducts.length
-    : initialRender.totalCount;
+    : initialCatalog.totalCount;
   const renderedTotalPages = activeResults
     ? activeResults.totalPages
-    : initialRender.totalPages;
-  const renderedPage = activeResults
-    ? activeResults.safePage
-    : initialRender.page;
-  const renderedFrom = activeResults ? activeResults.from : initialRender.from;
-  const renderedTo = activeResults ? activeResults.to : initialRender.to;
-  const hasServerRenderedFallback = initialRender.products.length > 0;
+    : initialCatalog.totalPages;
+  const renderedPage = activeResults ? activeResults.safePage : initialCatalog.page;
+  const renderedFrom = activeResults ? activeResults.from : initialCatalog.from;
+  const renderedTo = activeResults ? activeResults.to : initialCatalog.to;
+  const hasServerRenderedFallback = initialCatalog.products.length > 0;
   const blockingLoad =
     activeResults == null && !hasServerRenderedFallback && activeFetching;
   const blockingError =
@@ -188,8 +215,8 @@ export default function DeviceCatalogBrowser({
   }, [actions, activeResults?.safePage, state.page]);
 
   useEffect(() => {
-    syncUrl(activeResults?.safePage ?? initialRender.page);
-  }, [activeResults?.safePage, initialRender.page, state, syncUrl]);
+    syncUrl(activeResults?.safePage ?? initialCatalog.page);
+  }, [activeResults?.safePage, initialCatalog.page, state, syncUrl]);
 
   useEffect(() => {
     if (catalogPayload) {
@@ -221,12 +248,7 @@ export default function DeviceCatalogBrowser({
     state,
   ]);
 
-  const activeChips = buildActiveChips(
-    catalogPayload,
-    state,
-    protocols,
-    manufacturers,
-  );
+  const activeChips = buildActiveChips(catalogPayload, state, initialFacets);
 
   function loadSearchData() {
     if (catalogPayload || searchPayload) {
@@ -307,7 +329,10 @@ export default function DeviceCatalogBrowser({
       <CatalogSidebar
         protocols={protocols}
         manufacturers={manufacturers}
-        categoryCount={categoryCount}
+        categories={categories}
+        integrations={integrations}
+        platforms={platforms}
+        hubs={hubs}
         featureCounts={featureCounts}
         state={state}
         onToggleProtocol={(value) => {
@@ -317,6 +342,22 @@ export default function DeviceCatalogBrowser({
         onToggleManufacturer={(value) => {
           loadCatalogData();
           actions.toggleManufacturer(value);
+        }}
+        onToggleCategory={(value) => {
+          loadCatalogData();
+          actions.toggleCategory(value);
+        }}
+        onToggleIntegration={(value) => {
+          loadCatalogData();
+          actions.toggleIntegration(value);
+        }}
+        onTogglePlatform={(value) => {
+          loadCatalogData();
+          actions.togglePlatform(value);
+        }}
+        onToggleHub={(value) => {
+          loadCatalogData();
+          actions.toggleHub(value);
         }}
         onToggleFeature={(value) => {
           loadCatalogData();

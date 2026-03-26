@@ -18,43 +18,8 @@ interface ProductsExport {
   products: ProductSummary[];
 }
 
-interface ProtocolSummary {
-  slug: string;
-  name: string;
-  deviceCount: number;
-}
-
-interface ProtocolsExport {
-  protocols: ProtocolSummary[];
-}
-
-interface ManufacturerSummary {
-  slug: string;
-  name: string;
-  deviceCount: number;
-}
-
-interface ManufacturersExport {
-  manufacturers: ManufacturerSummary[];
-}
-
-interface CategoriesExport {
-  count: number;
-}
-
 const products = await readExportJson<ProductsExport>("products.json");
-const protocols = await readExportJson<ProtocolsExport>("protocols.json");
-const manufacturers = await readExportJson<ManufacturersExport>(
-  "manufacturers.json",
-);
-const categories = await readExportJson<CategoriesExport>("categories.json");
 const catalogPayload = await getCatalogPayload();
-
-const manufacturerOptions = [...manufacturers.manufacturers].sort((left, right) =>
-  right.deviceCount === left.deviceCount
-    ? left.name.localeCompare(right.name)
-    : right.deviceCount - left.deviceCount,
-);
 
 const featureCounts = {
   localControl: products.products.filter((product) => product.localControl === true)
@@ -87,21 +52,14 @@ const formatCount = new Intl.NumberFormat("en-US");
       description="Find compatible smart home devices for your setup. Use filters to narrow the catalog by protocol, manufacturer, and features such as local control, Matter certification, and hub requirements."
       stats={[
         { value: formatCount.format(products.count), label: "Devices" },
-        { value: formatCount.format(protocols.protocols.length), label: "Protocols" },
-        { value: formatCount.format(manufacturerOptions.length), label: "Manufacturers" },
+        { value: formatCount.format(catalogPayload.facets.protocols.length), label: "Protocols" },
+        { value: formatCount.format(catalogPayload.facets.manufacturers.length), label: "Manufacturers" },
       ]}
     />
 
     <DeviceCatalogBrowser
       client:load
-      catalogEndpoint="/catalog.json"
-      pageSize={12}
-      autoloadMode="scroll"
-      protocols={protocols.protocols}
-      manufacturers={manufacturerOptions}
-      categoryCount={categories.count}
-      featureCounts={featureCounts}
-      initialRender={{
+      initialCatalog={{
         products: initialCatalog.pagedProducts,
         totalCount: initialCatalog.filteredProducts.length,
         totalPages: initialCatalog.totalPages,
@@ -109,6 +67,17 @@ const formatCount = new Intl.NumberFormat("en-US");
         from: initialCatalog.from,
         to: initialCatalog.to,
       }}
+      initialFacets={{
+        protocols: catalogPayload.facets.protocols,
+        manufacturers: catalogPayload.facets.manufacturers,
+        categories: catalogPayload.facets.categories,
+        integrations: catalogPayload.facets.integrations,
+        platforms: catalogPayload.facets.platforms,
+        hubs: catalogPayload.facets.hubs,
+        featureCounts,
+      }}
+      endpoints={{ catalog: "/catalog.json", autoloadMode: "scroll" }}
+      uiConfig={{ pageSize: 12 }}
     />
   </div>
 </BaseLayout>

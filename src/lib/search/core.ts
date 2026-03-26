@@ -21,6 +21,8 @@ export interface SearchPreviewResults {
 function createEmptyCountsByType(): SearchCountsByType {
   return {
     device: 0,
+    integration: 0,
+    platform: 0,
     hub: 0,
     manufacturer: 0,
   };
@@ -43,6 +45,14 @@ export function getSearchEntityTypeLabel(type: SearchEntityType) {
 
   if (type === "hub") {
     return "Hubs";
+  }
+
+  if (type === "integration") {
+    return "Integrations";
+  }
+
+  if (type === "platform") {
+    return "Platforms";
   }
 
   return "Manufacturers";
@@ -101,6 +111,24 @@ function matchesLockedFilters(
   }
 
   if (
+    lockedFilters?.integrations?.length &&
+    !lockedFilters.integrations.some((integrationSlug) =>
+      product.compatibleIntegrationSlugs.includes(integrationSlug),
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    lockedFilters?.platforms?.length &&
+    !lockedFilters.platforms.some((platformSlug) =>
+      product.compatiblePlatformSlugs.includes(platformSlug),
+    )
+  ) {
+    return false;
+  }
+
+  if (
     lockedFilters?.hubs?.length &&
     !lockedFilters.hubs.some((hubSlug) =>
       product.compatibleHubSlugs.includes(hubSlug),
@@ -144,7 +172,12 @@ function sortProducts(products: SearchDevice[], state: CatalogState) {
 
     if (state.sort === "compatibility") {
       const byCompatibility =
-        right.compatibleHubCount - left.compatibleHubCount;
+        right.compatibleIntegrationCount * 100 +
+        right.compatiblePlatformCount * 10 +
+        right.compatibleHubCount -
+        (left.compatibleIntegrationCount * 100 +
+          left.compatiblePlatformCount * 10 +
+          left.compatibleHubCount);
 
       if (byCompatibility !== 0) {
         return byCompatibility;
@@ -182,6 +215,8 @@ export function hasCatalogSelectionFilters(state: CatalogState) {
     state.protocols.length > 0 ||
     state.manufacturers.length > 0 ||
     state.categories.length > 0 ||
+    state.integrations.length > 0 ||
+    state.platforms.length > 0 ||
     state.hubs.length > 0 ||
     Object.values(state.features).some(Boolean)
   );

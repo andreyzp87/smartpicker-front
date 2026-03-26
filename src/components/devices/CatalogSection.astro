@@ -1,0 +1,51 @@
+---
+import SectionHeader from "../ui/SectionHeader.astro";
+import DeviceCatalogBrowser from "./DeviceCatalogBrowser";
+import type { DeviceCatalogBrowserProps } from "./catalog/types";
+
+interface Props {
+  eyebrow?: string;
+  title: string;
+  description: string;
+  initialCatalog: DeviceCatalogBrowserProps["initialCatalog"];
+  initialFacets: DeviceCatalogBrowserProps["initialFacets"];
+  endpoints?: DeviceCatalogBrowserProps["endpoints"];
+  uiConfig?: DeviceCatalogBrowserProps["uiConfig"];
+  class?: string;
+}
+
+const {
+  eyebrow = "Catalog",
+  title,
+  description,
+  initialCatalog,
+  initialFacets,
+  endpoints,
+  uiConfig,
+  class: className,
+} = Astro.props;
+
+const resolvedEndpoints: NonNullable<DeviceCatalogBrowserProps["endpoints"]> = {
+  catalog: "/catalog.json",
+  search: "/search.json",
+  autoloadMode: "scroll",
+  ...endpoints,
+};
+
+const resolvedUiConfig: NonNullable<DeviceCatalogBrowserProps["uiConfig"]> = {
+  pageSize: 12,
+  ...uiConfig,
+};
+---
+
+<section class:list={["mt-12 border-t border-theme py-12", className]}>
+  <SectionHeader eyebrow={eyebrow} title={title} description={description} />
+
+  <DeviceCatalogBrowser
+    client:load
+    initialCatalog={initialCatalog}
+    initialFacets={initialFacets}
+    endpoints={resolvedEndpoints}
+    uiConfig={resolvedUiConfig}
+  />
+</section>

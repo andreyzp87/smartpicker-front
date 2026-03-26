@@ -1,237 +1,198 @@
 ---
+import type {
+  HubsResponse,
+  ProductsIndexResponse,
+} from "../../../data/exports/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import HubFeatureCard from "../../components/hubs/HubFeatureCard.astro";
+import HubTableCell from "../../components/hubs/HubTableCell.astro";
+import DataTableSection from "../../components/ui/DataTableSection.astro";
 import PageIntro from "../../components/ui/PageIntro.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
 import { readExportJson } from "../../lib/exports";
-import { formatProtocolLabel, getProtocolStyle, sentenceCase } from "../../lib/ui";
+import { formatProtocolLabel, getProtocolStyle } from "../../lib/ui";
 
-interface EntityRef {
-  slug: string;
-  name: string;
+const [hubs, products] = await Promise.all([
+  readExportJson<HubsResponse>("hubs.json"),
+  readExportJson<ProductsIndexResponse>("products.json"),
+]);
+
+const productsByHub = new Map<string, ProductsIndexResponse["products"]>();
+
+for (const hub of hubs.hubs) {
+  productsByHub.set(
+    hub.slug,
+    products.products.filter((product) =>
+      product.compatibleHubSlugs.includes(hub.slug),
+    ),
+  );
 }
 
-interface HubSummary {
-  slug: string;
-  name: string;
-  manufacturer: EntityRef | null;
-  protocolsSupported: string[];
-  description: string | null;
-  deviceCount: number;
-  statusCounts: Record<string, number>;
-  protocolCounts: Record<string, number>;
-}
+const enrichedHubs = hubs.hubs
+  .map((hub) => {
+    const mappedProducts = productsByHub.get(hub.slug) ?? [];
+    const protocolCounts = mappedProducts.reduce<Record<string, number>>(
+      (counts, product) => {
+        if (product.primaryProtocol) {
+          counts[product.primaryProtocol] =
+            (counts[product.primaryProtocol] ?? 0) + 1;
+        }
 
-interface HubsExport {
-  count: number;
-  hubs: HubSummary[];
-}
+        return counts;
+      },
+      {},
+    );
 
-interface ProductsExport {
-  count: number;
-}
-
-const hubs = await readExportJson<HubsExport>("hubs.json");
-const products = await readExportJson<ProductsExport>("products.json");
-
-const sortedHubs = [...hubs.hubs].sort((left, right) =>
-  right.deviceCount === left.deviceCount
-    ? left.name.localeCompare(right.name)
-    : right.deviceCount - left.deviceCount,
-);
+    return {
+      ...hub,
+      protocolsSupported: Object.keys(protocolCounts),
+      protocolCounts,
+    };
+  })
+  .sort((left, right) =>
+    right.compatibleDeviceCount === left.compatibleDeviceCount
+      ? left.name.localeCompare(right.name)
+      : right.compatibleDeviceCount - left.compatibleDeviceCount,
+  );
 
 const totalProtocols = new Set(
-  sortedHubs.flatMap((hub) => hub.protocolsSupported),
+  enrichedHubs.flatMap((hub) => hub.protocolsSupported),
 ).size;
 const totalStatusFamilies = new Set(
-  sortedHubs.flatMap((hub) => Object.keys(hub.statusCounts)),
+  enrichedHubs.flatMap((hub) => Object.keys(hub.statusBreakdown)),
 ).size;
-
 const formatCount = new Intl.NumberFormat("en-US");
-
-function statusCount(hub: HubSummary, key: string): number {
-  return hub.statusCounts[key] ?? 0;
-}
+const hubColumns = [
+  { key: "hub", label: "Hub" },
+  { key: "protocols", label: "Protocols represented" },
+  { key: "status", label: "Status coverage" },
+  { key: "devices", label: "Devices", align: "right" as const },
+  { key: "action", label: "", align: "right" as const },
+];
 ---
 
 <BaseLayout
-  title="Smart Home Hubs | SmartPicker"
-  description="Compare smart home hubs and controllers by supported protocols, device coverage, and compatibility status."
+  title="Commercial Hubs | SmartPicker"
+  description="Compare commercial smart home hubs by compatible device coverage and current status breakdown."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
-      title="Smart Home Hubs"
-      description="Compare hubs and controllers to see which platforms support the devices and standards that matter most to your setup."
+      title="Commercial Hubs"
+      description="Commercial hubs are kept separate from integrations and platforms. Use this page to compare ecosystem-specific hub products and their current compatible device coverage."
       stats={[
         { value: formatCount.format(hubs.count), label: "Hubs tracked" },
-        { value: formatCount.format(totalProtocols), label: "Protocol families" },
-        { value: formatCount.format(products.count), label: "Devices mapped" },
-        { value: formatCount.format(totalStatusFamilies), label: "Status buckets" },
+        {
+          value: formatCount.format(totalProtocols),
+          label: "Protocols represented",
+        },
+        { value: formatCount.format(products.count), label: "Devices indexed" },
+        {
+          value: formatCount.format(totalStatusFamilies),
+          label: "Status buckets",
+        },
       ]}
     />
 
     <div class="mb-6 flex flex-wrap gap-3">
       {
-        ["zigbee", "zwave", "matter", "wifi", "thread", "bluetooth"].map((slug) => (
-          <span class="inline-flex items-center gap-2 rounded-full border border-theme bg-surface px-3 py-1.5 text-sm text-secondary shadow-card">
-            <span class:list={["inline-flex h-2.5 w-2.5 rounded-full", getProtocolStyle(slug).badge]}>
+        ["zigbee", "zwave", "matter", "wifi", "thread", "bluetooth"].map(
+          (slug) => (
+            <span class="border-theme bg-surface text-secondary shadow-card inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm">
+              <span
+                class:list={[
+                  "inline-flex h-2.5 w-2.5 rounded-full",
+                  getProtocolStyle(slug).badge,
+                ]}
+              />
+              {formatProtocolLabel(slug)}
             </span>
-            {formatProtocolLabel(slug)}
-          </span>
-        ))
+          ),
+        )
       }
     </div>
 
-    <SectionHeader eyebrow="Featured hubs" title="Controllers worth comparing" />
+    <SectionHeader
+      eyebrow="Featured hubs"
+      title="Commercial ecosystems worth comparing"
+    />
 
-    <section class="grid gap-4 pb-6 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
+    <section
+      class="grid [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))] gap-4 pb-6"
+    >
       {
-        sortedHubs.map((hub, index) => (
+        enrichedHubs.map((hub, index) => (
           <div style={`animation-delay:${0.05 + index * 0.05}s`}>
             <HubFeatureCard
               href={`/hubs/${hub.slug}`}
               name={hub.name}
               manufacturerName={hub.manufacturer?.name ?? "Independent"}
               protocolsSupported={hub.protocolsSupported}
-              verifiedCount={formatCount.format(statusCount(hub, "verified"))}
-              reportedCount={formatCount.format(statusCount(hub, "reported"))}
-              untestedCount={formatCount.format(statusCount(hub, "untested"))}
+              verifiedCount={formatCount.format(
+                hub.statusBreakdown.verified ?? 0,
+              )}
+              reportedCount={formatCount.format(
+                hub.statusBreakdown.reported ?? 0,
+              )}
+              untestedCount={formatCount.format(
+                hub.statusBreakdown.untested ?? 0,
+              )}
               protocolCounts={Object.entries(hub.protocolCounts)
                 .filter(([, count]) => count > 0)
                 .sort((left, right) => right[1] - left[1])
                 .map(([protocol, count]) => ({ protocol, count }))}
-              deviceCount={hub.deviceCount}
+              deviceCount={hub.compatibleDeviceCount}
             />
           </div>
         ))
       }
     </section>
 
-    <section
-      class="animate-fade-in mb-0 overflow-hidden rounded-2xl border border-theme bg-surface"
-      style="animation-delay:0.25s"
-    >
-      <div class="flex items-center justify-between border-b border-theme px-6 py-5">
-        <h2 class="text-2xl font-semibold tracking-tight">All Hubs & Controllers</h2>
-        <span class="text-[13px] text-muted">
-          {formatCount.format(hubs.count)} hubs tracked
-        </span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full border-collapse">
-          <thead>
-            <tr>
-              <th class="bg-elevated px-6 py-3 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
-                Hub
-              </th>
-              <th class="bg-elevated px-6 py-3 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
-                Protocols
-              </th>
-              <th class="bg-elevated px-6 py-3 text-left text-[11px] font-semibold tracking-wider uppercase text-muted">
-                Status coverage
-              </th>
-              <th class="bg-elevated px-6 py-3 text-right text-[11px] font-semibold tracking-wider uppercase text-muted">
-                Devices
-              </th>
-              <th class="bg-elevated px-6 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              sortedHubs.map((hub) => (
-                <tr class="border-t border-theme odd:bg-[var(--sp-table-row-alt)] hover:bg-[var(--sp-table-row-hover)]">
-                  <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                      <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-elevated text-sm font-semibold text-secondary">
-                        H
-                      </div>
-                      <div>
-                        <div class="text-sm font-semibold text-primary">{hub.name}</div>
-                        <div class="text-xs text-muted">
-                          {hub.manufacturer?.name ?? "Independent"}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="flex flex-wrap gap-1">
-                      {
-                        hub.protocolsSupported.map((protocol) => {
-                          const style = getProtocolStyle(protocol);
-
-                          return (
-                            <span
-                              class:list={[
-                                "inline-flex h-7 w-7 items-center justify-center rounded-md text-[11px] font-semibold",
-                                style.badge,
-                                style.text,
-                              ]}
-                              title={protocol}
-                            >
-                              {style.shortLabel}
-                            </span>
-                          );
-                        })
-                      }
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="text-xs text-muted">
-                      {Object.entries(hub.statusCounts)
-                        .filter(([, count]) => count > 0)
-                        .map(([status, count]) =>
-                          `${sentenceCase(status)} ${formatCount.format(count)}`,
-                        )
-                        .join(", ")}
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 text-right">
-                    <span class="text-sm font-medium font-mono">
-                      {formatCount.format(hub.deviceCount)}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <a
-                      href={`/hubs/${hub.slug}`}
-                      class="text-sm font-medium text-blue transition-colors hover:text-primary"
-                    >
-                      View →
-                    </a>
-                  </td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
-    </section>
+    <DataTableSection
+      class="mb-0"
+      title="All Commercial Hubs"
+      summaryLabel={`${formatCount.format(hubs.count)} hubs tracked`}
+      columns={hubColumns}
+      rows={enrichedHubs}
+      mobileMode="scroll"
+      cellComponent={HubTableCell}
+    />
 
     <section class="grid gap-4 pt-6 pb-20 md:grid-cols-2">
-      <article class="rounded-2xl border border-theme bg-surface p-6 shadow-card" style="animation-delay:0.3s">
-        <h3 class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-elevated text-sm">
+      <article
+        class="border-theme bg-surface shadow-card rounded-2xl border p-6"
+      >
+        <h3
+          class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <span
+            class="bg-elevated inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm"
+          >
             H
           </span>
-          What is a hub?
+          What counts as a hub here?
         </h3>
-        <p class="text-sm leading-relaxed text-secondary">
-          A smart home hub is the control layer that coordinates protocols,
-          integrations, and automations across your devices. Some are dedicated
-          hardware gateways, while others are software platforms that run on your
-          own hardware.
+        <p class="text-secondary text-sm leading-relaxed">
+          Hub pages are now explicitly about commercial hubs and ecosystems.
+          Open platforms and integrations are tracked on their own routes.
         </p>
       </article>
-      <article class="rounded-2xl border border-theme bg-surface p-6 shadow-card" style="animation-delay:0.35s">
-        <h3 class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight">
-          <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-elevated text-sm">
+      <article
+        class="border-theme bg-surface shadow-card rounded-2xl border p-6"
+      >
+        <h3
+          class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight"
+        >
+          <span
+            class="bg-elevated inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm"
+          >
             ↔
           </span>
-          Why compatibility matters
+          Why separate them?
         </h3>
-        <p class="text-sm leading-relaxed text-secondary">
-          Two hubs may both claim Zigbee support but still differ dramatically in
-          device coverage. SmartPicker helps you compare real device support so
-          you can choose a platform with fewer surprises.
+        <p class="text-secondary text-sm leading-relaxed">
+          A commercial hub is one compatibility target, but it is not the same
+          thing as an integration or an automation platform. SmartPicker keeps
+          those layers distinct so support is easier to interpret.
         </p>
       </article>
     </section>

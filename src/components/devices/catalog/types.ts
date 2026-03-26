@@ -1,5 +1,12 @@
-import type { InitialCatalogRender } from "../../../lib/catalog/core";
-import type { CatalogFeatureKey } from "../../../lib/catalog/shared";
+import type {
+  CatalogLockedFilters,
+  InitialCatalogRender,
+} from "../../../lib/catalog/core";
+import type {
+  CatalogCategoryFacetOption,
+  CatalogFacetOption,
+  CatalogFeatureKey,
+} from "../../../lib/catalog/shared";
 
 export interface ProtocolOption {
   slug: string;
@@ -22,20 +29,41 @@ export interface FeatureCounts {
   noHub: number;
 }
 
-export interface DeviceCatalogBrowserProps {
-  catalogEndpoint: string;
-  searchEndpoint?: string;
-  pageSize?: number;
-  autoloadMode?: "idle" | "scroll" | "none";
+export interface CatalogHiddenSections {
+  protocols?: boolean;
+  manufacturers?: boolean;
+  categories?: boolean;
+  integrations?: boolean;
+  platforms?: boolean;
+  hubs?: boolean;
+  features?: boolean;
+}
+
+export interface CatalogBrowserInitialFacets {
   protocols: ProtocolOption[];
   manufacturers: ManufacturerOption[];
-  categoryCount: number;
+  categories: CatalogCategoryFacetOption[];
+  integrations: CatalogFacetOption[];
+  platforms: CatalogFacetOption[];
+  hubs: CatalogFacetOption[];
   featureCounts: Record<CatalogFeatureKey, number>;
-  initialRender: InitialCatalogRender;
-  hiddenSections?: {
-    protocols?: boolean;
-    manufacturers?: boolean;
-    categories?: boolean;
-    features?: boolean;
-  };
+}
+
+export interface CatalogBrowserEndpoints {
+  catalog?: string;
+  search?: string;
+  autoloadMode?: "idle" | "scroll" | "none";
+}
+
+export interface CatalogBrowserUiConfig {
+  pageSize?: number;
+  hiddenSections?: CatalogHiddenSections;
+  lockedFilters?: CatalogLockedFilters;
+}
+
+export interface DeviceCatalogBrowserProps {
+  initialCatalog: InitialCatalogRender;
+  initialFacets: CatalogBrowserInitialFacets;
+  endpoints?: CatalogBrowserEndpoints;
+  uiConfig?: CatalogBrowserUiConfig;
 }

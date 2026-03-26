@@ -1,0 +1,275 @@
+---
+import type {
+  IntegrationDetailResponse,
+  IntegrationSlugsResponse,
+  ProductsIndexResponse,
+} from "../../../data/exports/types";
+import CatalogSection from "../../components/devices/CatalogSection.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
+import DetailSidebarCard from "../../components/ui/DetailSidebarCard.astro";
+import EntityCardGridSection from "../../components/ui/EntityCardGridSection.astro";
+import EntityDetailHero from "../../components/ui/EntityDetailHero.astro";
+import MetricCardGrid from "../../components/ui/MetricCardGrid.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import {
+  createDefaultCatalogState,
+  getCatalogResults,
+} from "../../lib/catalog/core";
+import { getCatalogPayload } from "../../lib/catalog/server";
+import { readExportJson } from "../../lib/exports";
+import { sentenceCase } from "../../lib/ui";
+
+export async function getStaticPaths() {
+  const { slugs } = await readExportJson<IntegrationSlugsResponse>(
+    "integrations/slugs.json",
+  );
+
+  return slugs.map((slug) => ({
+    params: { slug },
+  }));
+}
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error("Missing integration slug.");
+}
+
+const detail = await readExportJson<IntegrationDetailResponse>(
+  `integrations/${slug}.json`,
+);
+const products = await readExportJson<ProductsIndexResponse>("products.json");
+const catalogPayload = await getCatalogPayload();
+
+const integration = detail.integration;
+const productBySlug = new Map(
+  products.products.map((product) => [product.slug, product]),
+);
+const compatibleProducts = integration.compatibleDeviceSlugs
+  .map((deviceSlug) => productBySlug.get(deviceSlug))
+  .filter((product): product is ProductsIndexResponse["products"][number] =>
+    Boolean(product),
+  )
+  .slice(0, 8);
+const featureCounts = Object.fromEntries(
+  catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
+) as {
+  localControl: number;
+  matterCertified: number;
+  noCloud: number;
+  noHub: number;
+};
+const initialCatalog = getCatalogResults(
+  catalogPayload,
+  createDefaultCatalogState(),
+  "",
+  { integrations: [integration.slug] },
+  12,
+);
+const formatCount = new Intl.NumberFormat("en-US");
+const updatedLabel = new Date(integration.updatedAt).toLocaleDateString(
+  "en-US",
+  {
+    dateStyle: "medium",
+  },
+);
+const statusMetrics = Object.entries(integration.statusBreakdown).map(
+  ([status, count]) => ({
+    value: formatCount.format(count),
+    label: sentenceCase(status),
+  }),
+);
+const linkedPlatformCards = integration.platforms.map((platform) => ({
+  href: `/platforms/${platform.slug}`,
+  title: platform.name,
+  meta: platform.slug,
+}));
+---
+
+<BaseLayout
+  title={`${integration.name} | SmartPicker`}
+  description={`${integration.name} compatibility coverage, linked platforms, and device browsing in SmartPicker.`}
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <Breadcrumbs
+      items={[
+        { href: "/", label: "Home" },
+        { href: "/integrations", label: "Integrations" },
+        { label: integration.name },
+      ]}
+    />
+
+    <EntityDetailHero
+      icon="IN"
+      title={integration.name}
+      description={integration.description ?? integration.searchText}
+      badges={[
+        {
+          label: sentenceCase(integration.integrationKind.replace(/_/g, " ")),
+        },
+        { label: `Updated ${updatedLabel}` },
+      ]}
+      stats={[
+        {
+          value: formatCount.format(integration.compatibleDeviceCount),
+          label: "Compatible devices",
+        },
+        {
+          value: formatCount.format(integration.platforms.length),
+          label: "Linked platforms",
+        },
+        {
+          value: formatCount.format(
+            Object.values(integration.statusBreakdown).reduce(
+              (sum, value) => sum + value,
+              0,
+            ),
+          ),
+          label: "Status rows",
+        },
+        { value: updatedLabel, label: "Updated", muted: true },
+      ]}
+    />
+
+    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1.55fr)_320px]">
+      <div class="flex flex-col gap-6">
+        <EntityCardGridSection
+          eyebrow="Platforms"
+          title="Linked platforms"
+          description="Platforms that include this integration as part of their device support."
+          items={linkedPlatformCards}
+          emptyText="No platforms are listed for this integration yet."
+        />
+
+        <section>
+          <SectionHeader
+            eyebrow="Coverage"
+            title="Status breakdown"
+            description="Current compatibility status totals for this integration."
+          />
+          <MetricCardGrid
+            items={statusMetrics}
+            tone="accent"
+            emptyMessage="No status breakdown is available for this integration yet."
+          />
+        </section>
+
+        <section>
+          <SectionHeader
+            eyebrow="Hardware"
+            title="Hardware hints"
+            description="Optional infrastructure notes that help explain setup requirements."
+          />
+          <div class="grid gap-3 md:grid-cols-2">
+            {
+              integration.hardwareHints.length > 0 ? (
+                integration.hardwareHints.map((hint) => (
+                  <div class="border-theme bg-surface rounded-2xl border p-5">
+                    <div class="text-primary text-base font-semibold">
+                      <a href={`/devices/${hint.product.slug}`}>
+                        {hint.product.name}
+                      </a>
+                    </div>
+                    <div class="text-muted mt-1 text-sm">
+                      {hint.manufacturer?.name ?? "Unknown manufacturer"} ·{" "}
+                      {hint.category?.name ?? "Uncategorized"}
+                    </div>
+                    <div class="border-theme bg-badge text-secondary mt-3 rounded-md border px-3 py-1 text-[12px] font-medium">
+                      {sentenceCase(hint.requirementType.replace(/_/g, " "))}
+                    </div>
+                    {hint.note && (
+                      <p class="text-secondary mt-3 text-sm leading-relaxed">
+                        {hint.note}
+                      </p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div class="border-theme bg-surface text-muted rounded-2xl border px-5 py-6 text-sm md:col-span-2">
+                  No setup notes are listed for this integration yet.
+                </div>
+              )
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6">
+        <DetailSidebarCard
+          title="At a glance"
+          rows={[
+            {
+              label: "Protocol",
+              value: integration.primaryProtocol ?? "Unknown",
+            },
+            {
+              label: "Kind",
+              value: sentenceCase(
+                integration.integrationKind.replace(/_/g, " "),
+              ),
+            },
+            {
+              label: "Website",
+              value: integration.website
+                ? integration.website.replace(/^https?:\/\//, "")
+                : "Not listed",
+              href: integration.website,
+              external: Boolean(integration.website),
+            },
+          ]}
+        />
+
+        <div class="border-theme bg-surface rounded-2xl border p-5">
+          <h2 class="text-primary text-lg font-semibold tracking-tight">
+            Sample devices
+          </h2>
+          <div class="mt-4 flex flex-col gap-3">
+            {
+              compatibleProducts.length > 0 ? (
+                compatibleProducts.map((product) => (
+                  <a
+                    href={`/devices/${product.slug}`}
+                    class="border-theme bg-elevated text-secondary hover:border-theme-hover hover:text-primary rounded-xl border px-4 py-3 text-sm transition-all"
+                  >
+                    {product.name}
+                  </a>
+                ))
+              ) : (
+                <div class="text-muted text-sm">
+                  No sample devices are available yet.
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <CatalogSection
+      title={`Browse devices for ${integration.name}`}
+      description="Browse devices that work with this integration and refine by protocol, manufacturer, platform, hub, and key features."
+      initialCatalog={{
+        products: initialCatalog.pagedProducts,
+        totalCount: initialCatalog.filteredProducts.length,
+        totalPages: initialCatalog.totalPages,
+        page: initialCatalog.safePage,
+        from: initialCatalog.from,
+        to: initialCatalog.to,
+      }}
+      initialFacets={{
+        protocols: catalogPayload.facets.protocols,
+        manufacturers: catalogPayload.facets.manufacturers,
+        categories: catalogPayload.facets.categories,
+        integrations: catalogPayload.facets.integrations,
+        platforms: catalogPayload.facets.platforms,
+        hubs: catalogPayload.facets.hubs,
+        featureCounts,
+      }}
+      uiConfig={{
+        hiddenSections: { integrations: true },
+        lockedFilters: { integrations: [integration.slug] },
+      }}
+    />
+  </div>
+</BaseLayout>

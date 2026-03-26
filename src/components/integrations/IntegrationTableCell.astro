@@ -1,0 +1,42 @@
+---
+import type { IntegrationsResponse } from "../../../data/exports/types";
+import ProtocolBadge from "../ui/ProtocolBadge.astro";
+import { sentenceCase } from "../../lib/ui";
+
+interface Props {
+  row: IntegrationsResponse["integrations"][number];
+  column: {
+    key: string;
+  };
+}
+
+const { row: integration, column } = Astro.props;
+---
+
+{
+  column.key === "integration" ? (
+    <div>
+      <div class="text-sm font-semibold">{integration.name}</div>
+      <div class="text-muted mt-1 text-xs">
+        {sentenceCase(integration.integrationKind.replace(/_/g, " "))}
+      </div>
+    </div>
+  ) : column.key === "protocol" ? (
+    <div class="text-secondary text-sm">
+      <ProtocolBadge
+        slug={integration.primaryProtocol}
+        class="w-fit px-2 py-0.5 text-[10px] font-semibold uppercase"
+      />
+    </div>
+  ) : column.key === "platforms" ? (
+    <div class="text-secondary text-sm">
+      {integration.platformSlugs.length > 0
+        ? `${integration.platformSlugs.length} linked platform${integration.platformSlugs.length === 1 ? "" : "s"}`
+        : "No linked platforms"}
+    </div>
+  ) : (
+    <div class="text-secondary font-mono text-sm">
+      {integration.compatibleDeviceCount.toLocaleString("en-US")} devices
+    </div>
+  )
+}

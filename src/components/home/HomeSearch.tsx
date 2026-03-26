@@ -24,7 +24,13 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
 });
 
-const entityTypeOptions: SearchEntityType[] = ["device", "hub", "manufacturer"];
+const entityTypeOptions: SearchEntityType[] = [
+  "device",
+  "integration",
+  "platform",
+  "hub",
+  "manufacturer",
+];
 
 function getInitials(value: string) {
   return value
@@ -43,6 +49,14 @@ function getEntryHref(entry: SearchEntry) {
 
   if (entry.entityType === "hub") {
     return `/hubs/${entry.slug}`;
+  }
+
+  if (entry.entityType === "integration") {
+    return `/integrations/${entry.slug}`;
+  }
+
+  if (entry.entityType === "platform") {
+    return `/platforms/${entry.slug}`;
   }
 
   return `/manufacturers/${entry.slug}`;
@@ -95,6 +109,14 @@ function renderSearchResult(entry: SearchEntry) {
               {compatibilityStyle.label}
             </span>
             <span className="border-badge bg-badge text-secondary rounded-full border px-2.5 py-1 text-[11px] font-semibold">
+              {entry.compatibleIntegrationCount} integration
+              {entry.compatibleIntegrationCount === 1 ? "" : "s"}
+            </span>
+            <span className="border-badge bg-badge text-secondary rounded-full border px-2.5 py-1 text-[11px] font-semibold">
+              {entry.compatiblePlatformCount} platform
+              {entry.compatiblePlatformCount === 1 ? "" : "s"}
+            </span>
+            <span className="border-badge bg-badge text-secondary rounded-full border px-2.5 py-1 text-[11px] font-semibold">
               {entry.compatibleHubCount} hub
               {entry.compatibleHubCount === 1 ? "" : "s"}
             </span>
@@ -119,8 +141,36 @@ function renderSearchResult(entry: SearchEntry) {
   }
 
   if (entry.entityType === "hub") {
-    const primaryProtocol = entry.protocolsSupported[0] ?? null;
-    const protocolStyle = getProtocolStyle(primaryProtocol);
+    return (
+      <a
+        key={`${entry.entityType}:${entry.slug}`}
+        href={getEntryHref(entry)}
+        className="card-hover border-theme bg-elevated text-primary flex items-start gap-3 rounded-2xl border px-4 py-3"
+      >
+        <div className="bg-surface text-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-sm font-semibold">
+          HB
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">{entry.name}</div>
+              <div className="text-muted truncate text-[13px]">
+                {entry.manufacturerName ?? "Independent"} ·{" "}
+                {entry.compatibleDeviceCount} compatible device
+                {entry.compatibleDeviceCount === 1 ? "" : "s"}
+              </div>
+            </div>
+            <span className="bg-blue-subtle text-blue inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold">
+              Hub
+            </span>
+          </div>
+        </div>
+      </a>
+    );
+  }
+
+  if (entry.entityType === "integration") {
+    const protocolStyle = getProtocolStyle(entry.primaryProtocol);
 
     return (
       <a
@@ -129,39 +179,73 @@ function renderSearchResult(entry: SearchEntry) {
         className="card-hover border-theme bg-elevated text-primary flex items-start gap-3 rounded-2xl border px-4 py-3"
       >
         <div className="bg-surface text-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-sm font-semibold">
-          {protocolStyle.shortLabel || "HB"}
+          {protocolStyle.shortLabel}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start gap-2">
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold">{entry.name}</div>
               <div className="text-muted truncate text-[13px]">
-                {entry.manufacturerName ?? "Hub platform"} · {entry.deviceCount}{" "}
-                mapped device{entry.deviceCount === 1 ? "" : "s"}
+                {entry.manufacturerName ?? "Independent"} ·{" "}
+                {entry.compatibleDeviceCount} compatible device
+                {entry.compatibleDeviceCount === 1 ? "" : "s"}
               </div>
             </div>
             <span className="bg-blue-subtle text-blue inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold">
-              Hub
+              Integration
             </span>
           </div>
 
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {entry.protocolsSupported.slice(0, 3).map((protocol) => {
-              const style = getProtocolStyle(protocol);
+            <span
+              className={joinClasses(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                protocolStyle.badge,
+                protocolStyle.text,
+              )}
+            >
+              {formatProtocolLabel(entry.primaryProtocol)}
+            </span>
+            <span className="border-theme bg-badge text-secondary rounded-full border px-2.5 py-1 text-[11px] font-semibold">
+              {entry.platformCount} platform
+              {entry.platformCount === 1 ? "" : "s"}
+            </span>
+          </div>
+        </div>
+      </a>
+    );
+  }
 
-              return (
-                <span
-                  key={protocol}
-                  className={joinClasses(
-                    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                    style.badge,
-                    style.text,
-                  )}
-                >
-                  {formatProtocolLabel(protocol)}
-                </span>
-              );
-            })}
+  if (entry.entityType === "platform") {
+    return (
+      <a
+        key={`${entry.entityType}:${entry.slug}`}
+        href={getEntryHref(entry)}
+        className="card-hover border-theme bg-elevated text-primary flex items-start gap-3 rounded-2xl border px-4 py-3"
+      >
+        <div className="bg-surface text-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] text-sm font-semibold">
+          PF
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">{entry.name}</div>
+              <div className="text-muted truncate text-[13px]">
+                {entry.manufacturerName ?? "Independent"} ·{" "}
+                {entry.compatibleDeviceCount} supported device
+                {entry.compatibleDeviceCount === 1 ? "" : "s"}
+              </div>
+            </div>
+            <span className="bg-blue-subtle text-blue inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold">
+              Platform
+            </span>
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className="border-theme bg-badge text-secondary rounded-full border px-2.5 py-1 text-[11px] font-semibold">
+              {entry.integrationCount} integration
+              {entry.integrationCount === 1 ? "" : "s"}
+            </span>
           </div>
         </div>
       </a>
@@ -221,9 +305,11 @@ export default function HomeSearch({
   const supportsDeviceSearch = enabledEntityTypes.includes("device");
   const supportsMultipleTypes = searchEntityTypes.length > 1;
   const placeholder =
+    searchEntityTypes.includes("integration") ||
+    searchEntityTypes.includes("platform") ||
     searchEntityTypes.includes("hub") ||
     searchEntityTypes.includes("manufacturer")
-      ? "Search devices, hubs, manufacturers..."
+      ? "Search devices, integrations, platforms, hubs, manufacturers..."
       : "Search devices, manufacturers, models...";
   const noResultsLabel =
     activeType === "all"
@@ -361,7 +447,8 @@ export default function HomeSearch({
                 No {noResultsLabel} matched &quot;{normalizedQuery}&quot;.
               </p>
               <p className="text-muted mt-1 text-sm">
-                Try a manufacturer, model number, hub name, or protocol instead.
+                Try a brand, model number, protocol, integration, or platform
+                instead.
               </p>
               {supportsDeviceSearch && (
                 <a
@@ -387,14 +474,14 @@ export default function HomeSearch({
                     href={browseHref}
                     className="text-blue text-sm font-semibold transition-all hover:opacity-80"
                   >
-                    Open device catalog
+                    See all matching devices
                   </a>
                 )}
               </div>
 
               {activeType === "all" && (
                 <div className="text-muted mb-3 flex flex-wrap gap-2 px-1 text-[12px]">
-                  {entityTypeOptions
+                  {searchEntityTypes
                     .filter(
                       (entityType) =>
                         searchResults.countsByType[entityType] > 0,

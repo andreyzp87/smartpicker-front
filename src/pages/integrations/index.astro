@@ -1,0 +1,118 @@
+---
+import type { IntegrationsResponse } from "../../../data/exports/types";
+import IntegrationTableCell from "../../components/integrations/IntegrationTableCell.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PageIntro from "../../components/ui/PageIntro.astro";
+import DataTableSection from "../../components/ui/DataTableSection.astro";
+import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
+import { readExportJson } from "../../lib/exports";
+import { sentenceCase } from "../../lib/ui";
+
+const integrations =
+  await readExportJson<IntegrationsResponse>("integrations.json");
+
+const sortedIntegrations = [...integrations.integrations].sort((left, right) =>
+  right.compatibleDeviceCount === left.compatibleDeviceCount
+    ? left.name.localeCompare(right.name)
+    : right.compatibleDeviceCount - left.compatibleDeviceCount,
+);
+const formatCount = new Intl.NumberFormat("en-US");
+const protocolCount = new Set(
+  integrations.integrations
+    .map((integration) => integration.primaryProtocol)
+    .filter(Boolean),
+).size;
+const integrationColumns = [
+  { key: "integration", label: "Integration", width: "1.4fr" },
+  { key: "protocol", label: "Protocol", width: "120px" },
+  { key: "platforms", label: "Platforms", width: "160px" },
+  {
+    key: "coverage",
+    label: "Coverage",
+    width: "140px",
+    align: "right" as const,
+  },
+];
+---
+
+<BaseLayout
+  title="Integrations | SmartPicker"
+  description="Browse smart home integrations and compare protocol support, platforms, and device coverage."
+>
+  <div class="mx-auto max-w-[1200px] px-6">
+    <PageIntro
+      title="Integrations"
+      description="Browse the software layers that connect devices to platforms and automation tools, then follow each one into the ecosystems it supports."
+      stats={[
+        {
+          value: formatCount.format(integrations.count),
+          label: "Integrations",
+        },
+        { value: formatCount.format(protocolCount), label: "Protocols" },
+        {
+          value: formatCount.format(
+            sortedIntegrations.filter(
+              (integration) => integration.compatibleDeviceCount > 0,
+            ).length,
+          ),
+          label: "With coverage",
+        },
+      ]}
+    />
+
+    <section class="mt-10">
+      <SectionHeader
+        title="Featured Integrations"
+        description="Integrations with the broadest device support right now."
+      />
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {
+          sortedIntegrations.slice(0, 6).map((integration) => (
+            <a
+              href={`/integrations/${integration.slug}`}
+              class="card-hover border-theme bg-surface text-primary rounded-2xl border p-5"
+            >
+              <div class="mb-3 flex items-start justify-between gap-3">
+                <div class="bg-elevated text-muted flex h-11 w-11 items-center justify-center rounded-[10px] text-sm font-semibold">
+                  IN
+                </div>
+                <ProtocolBadge
+                  slug={integration.primaryProtocol}
+                  class="px-2 py-0.5 text-[11px] font-semibold uppercase"
+                />
+              </div>
+              <div class="text-base font-semibold">{integration.name}</div>
+              <div class="text-muted mt-1 text-[13px]">
+                {sentenceCase(integration.integrationKind.replace(/_/g, " "))}
+              </div>
+              <div class="text-muted mt-4 flex flex-wrap gap-2 text-[11px]">
+                <span class="border-theme bg-badge rounded-md border px-2 py-1">
+                  {formatCount.format(integration.compatibleDeviceCount)}{" "}
+                  devices
+                </span>
+                <span class="border-theme bg-badge rounded-md border px-2 py-1">
+                  {integration.platformSlugs.length} platform
+                  {integration.platformSlugs.length === 1 ? "" : "s"}
+                </span>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="mt-14 pb-20">
+      <DataTableSection
+        title="All Integrations"
+        subtitle="Use this list to compare protocol focus, platform reach, and current compatible device coverage."
+        summaryLabel={`${formatCount.format(integrations.count)} integrations tracked`}
+        columns={integrationColumns}
+        rows={sortedIntegrations}
+        cellComponent={IntegrationTableCell}
+        getRowHref={(row) =>
+          `/integrations/${(row as IntegrationsResponse["integrations"][number]).slug}`}
+      />
+    </section>
+  </div>
+</BaseLayout>

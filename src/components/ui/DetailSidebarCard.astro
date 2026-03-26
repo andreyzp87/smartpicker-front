@@ -1,0 +1,68 @@
+---
+import SidebarPanel from "./SidebarPanel.astro";
+
+export interface DetailSidebarCardRow {
+  label: string;
+  value: string;
+  href?: string | null;
+  external?: boolean;
+  mono?: boolean;
+  valueClass?: string;
+}
+
+interface Props {
+  title: string;
+  rows?: DetailSidebarCardRow[];
+  compact?: boolean;
+  class?: string;
+}
+
+const {
+  title,
+  rows = [],
+  compact = false,
+  class: className,
+} = Astro.props;
+const hasDefaultSlot = Astro.slots.has("default");
+---
+
+<SidebarPanel title={title} compact={compact} class={className}>
+  {
+    rows.length > 0 && (
+      <div class:list={["flex flex-col text-sm", compact ? "gap-2.5" : "gap-3"]}>
+        {rows.map((row) => (
+          <div class="flex items-start justify-between gap-4">
+            <span class="text-muted">{row.label}</span>
+            <span
+              class:list={[
+                "text-secondary text-right font-medium",
+                row.mono && "font-mono",
+                row.valueClass,
+              ]}
+            >
+              {row.href ? (
+                <a
+                  href={row.href}
+                  rel={row.external ? "noreferrer" : undefined}
+                  target={row.external ? "_blank" : undefined}
+                >
+                  {row.value}
+                </a>
+              ) : (
+                row.value
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    hasDefaultSlot && (
+      <div class:list={[rows.length > 0 && "mt-4", compact && "text-[13px]"]}>
+        <slot />
+      </div>
+    )
+  }
+</SidebarPanel>

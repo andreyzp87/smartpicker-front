@@ -5,14 +5,25 @@ export type CatalogFeatureKey =
   | "noHub";
 
 export interface CatalogProduct {
+  id: number;
   slug: string;
   name: string;
+  manufacturerSlug: string | null;
   manufacturerName: string;
   model: string | null;
   categoryName: string | null;
+  categoryPath: string | null;
   primaryProtocol: string | null;
   localControl: boolean | null;
+  cloudDependent: boolean | null;
+  requiresHub: boolean | null;
+  matterCertified: boolean | null;
+  compatibleIntegrationCount: number;
+  compatiblePlatformCount: number;
   compatibleHubCount: number;
+  compatibleIntegrationSlugs: string[];
+  compatiblePlatformSlugs: string[];
+  compatibleHubSlugs: string[];
   compatibilityStatus: string | null;
   updatedAt: number;
   searchText: string;
@@ -41,6 +52,8 @@ export interface CatalogFilters {
   protocols: Record<string, number[]>;
   manufacturers: Record<string, number[]>;
   categories: Record<string, number[]>;
+  integrations: Record<string, number[]>;
+  platforms: Record<string, number[]>;
   hubs: Record<string, number[]>;
   features: Record<CatalogFeatureKey, number[]>;
 }
@@ -53,6 +66,8 @@ export interface CatalogPayload {
     protocols: CatalogFacetOption[];
     manufacturers: CatalogFacetOption[];
     categories: CatalogCategoryFacetOption[];
+    integrations: CatalogFacetOption[];
+    platforms: CatalogFacetOption[];
     hubs: CatalogFacetOption[];
     features: CatalogFeatureFacetOption[];
   };

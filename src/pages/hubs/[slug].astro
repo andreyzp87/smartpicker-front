@@ -1,71 +1,25 @@
 ---
-import DeviceCatalogBrowser from "../../components/devices/DeviceCatalogBrowser";
+import type {
+  HubDetailResponse,
+  HubSlugsResponse,
+  HubsResponse,
+  ProductsIndexResponse,
+} from "../../../data/exports/types";
+import CatalogSection from "../../components/devices/CatalogSection.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import HubCoverageCard from "../../components/hubs/HubCoverageCard.astro";
-import ButtonLink from "../../components/ui/ButtonLink.astro";
 import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
-import ProtocolBadge from "../../components/ui/ProtocolBadge.astro";
+import DetailSidebarCard from "../../components/ui/DetailSidebarCard.astro";
+import EntityDetailHero from "../../components/ui/EntityDetailHero.astro";
+import EntityLinkList from "../../components/ui/EntityLinkList.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
-import StatGrid from "../../components/ui/StatGrid.astro";
 import {
   createDefaultCatalogState,
   getCatalogResults,
 } from "../../lib/catalog/core";
 import { getCatalogPayload } from "../../lib/catalog/server";
 import { readExportJson } from "../../lib/exports";
-import {
-  formatProtocolLabel,
-  getProtocolStyle,
-  sentenceCase,
-} from "../../lib/ui";
-
-interface EntityRef {
-  id: number;
-  slug: string;
-  name: string;
-}
-
-interface HubDetail {
-  id: number;
-  slug: string;
-  name: string;
-  manufacturer: EntityRef | null;
-  protocolsSupported: string[];
-  description: string | null;
-  deviceCount: number;
-  statusCounts: Record<string, number>;
-  protocolCounts: Record<string, number>;
-  updatedAt: string | null;
-  deviceSlugs: string[];
-}
-
-interface HubDetailResponse {
-  generated: string;
-  hub: HubDetail;
-}
-
-interface HubSlugsResponse {
-  slugs: string[];
-}
-
-interface ProductSummary {
-  slug: string;
-  name: string;
-  manufacturer: EntityRef | null;
-  model: string | null;
-  category: EntityRef | null;
-  primaryProtocol: string | null;
-  compatibleHubSlugs: string[];
-  compatibilityStatuses: string[];
-}
-
-interface ProductsExport {
-  products: ProductSummary[];
-}
-
-interface HubsExport {
-  hubs: HubDetail[];
-}
+import { getProtocolStyle } from "../../lib/ui";
 
 export async function getStaticPaths() {
   const { slugs } = await readExportJson<HubSlugsResponse>("hubs/slugs.json");
@@ -81,45 +35,42 @@ if (!slug) {
   throw new Error("Missing hub slug.");
 }
 
-const detail = await readExportJson<HubDetailResponse>(`hubs/${slug}.json`);
-const products = await readExportJson<ProductsExport>("products.json");
-const allHubs = await readExportJson<HubsExport>("hubs.json");
-const catalogPayload = await getCatalogPayload();
+const [detail, products, allHubs, catalogPayload] = await Promise.all([
+  readExportJson<HubDetailResponse>(`hubs/${slug}.json`),
+  readExportJson<ProductsIndexResponse>("products.json"),
+  readExportJson<HubsResponse>("hubs.json"),
+  getCatalogPayload(),
+]);
 
 const hub = detail.hub;
 const mappedDevices = products.products.filter((product) =>
-  hub.deviceSlugs.includes(product.slug),
+  hub.compatibleDeviceSlugs.includes(product.slug),
 );
-const relatedHubs = allHubs.hubs
-  .filter((candidate) => candidate.slug !== hub.slug)
-  .sort((left, right) => {
-    const leftScore = left.protocolsSupported.filter((protocol) =>
-      hub.protocolsSupported.includes(protocol),
-    ).length;
-    const rightScore = right.protocolsSupported.filter((protocol) =>
-      hub.protocolsSupported.includes(protocol),
-    ).length;
-
-    if (leftScore !== rightScore) {
-      return rightScore - leftScore;
+const deriveProtocolCounts = (deviceList: ProductsIndexResponse["products"]) =>
+  deviceList.reduce<Record<string, number>>((counts, product) => {
+    if (product.primaryProtocol) {
+      counts[product.primaryProtocol] =
+        (counts[product.primaryProtocol] ?? 0) + 1;
     }
 
-    return right.deviceCount - left.deviceCount;
+    return counts;
+  }, {});
+const protocolCounts = deriveProtocolCounts(mappedDevices);
+const protocolsSupported = Object.keys(protocolCounts);
+const relatedHubs = allHubs.hubs
+  .filter((candidate) => candidate.slug !== hub.slug)
+  .map((candidate) => ({
+    ...candidate,
+    sharedProtocolCount: 0,
+  }))
+  .sort((left, right) => {
+    if (left.sharedProtocolCount !== right.sharedProtocolCount) {
+      return right.sharedProtocolCount - left.sharedProtocolCount;
+    }
+
+    return right.compatibleDeviceCount - left.compatibleDeviceCount;
   })
   .slice(0, 4);
-
-const formatCount = new Intl.NumberFormat("en-US");
-
-const updatedLabel = hub.updatedAt
-  ? new Date(hub.updatedAt).toLocaleDateString("en-US", { dateStyle: "medium" })
-  : "Unknown";
-const exportGenerated = new Date(detail.generated).toLocaleString("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-const description =
-  hub.description ??
-  `${hub.name} currently supports ${hub.deviceCount} mapped device${hub.deviceCount === 1 ? "" : "s"} across ${hub.protocolsSupported.length} protocol ${hub.protocolsSupported.length === 1 ? "family" : "families"}.`;
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -135,11 +86,22 @@ const initialCatalog = getCatalogResults(
   { hubs: [hub.slug] },
   12,
 );
+const formatCount = new Intl.NumberFormat("en-US");
+const updatedLabel = hub.updatedAt
+  ? new Date(hub.updatedAt).toLocaleDateString("en-US", { dateStyle: "medium" })
+  : "Unknown";
+const relatedHubItems = relatedHubs.map((candidate) => ({
+  href: `/hubs/${candidate.slug}`,
+  label: candidate.name,
+}));
+const description =
+  hub.description ??
+  `${hub.name} supports ${hub.compatibleDeviceCount} compatible device${hub.compatibleDeviceCount === 1 ? "" : "s"} in SmartPicker.`;
 ---
 
 <BaseLayout
   title={`${hub.name} | SmartPicker`}
-  description={`${hub.name} supported protocols, mapped devices, and compatibility coverage in SmartPicker.`}
+  description={`${hub.name} compatible devices and commercial hub coverage in SmartPicker.`}
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <Breadcrumbs
@@ -150,342 +112,198 @@ const initialCatalog = getCatalogResults(
       ]}
     />
 
-    <section class="animate-fade-in py-8 pb-10">
-      <div class="flex items-center gap-8 max-md:flex-col max-md:items-start">
-        <div
-          class="border-theme bg-elevated text-secondary flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border text-[34px] font-semibold"
-        >
-          H
-        </div>
-        <div class="min-w-0 flex-1">
-          <h1
-            class="text-[clamp(34px,4vw,48px)] leading-[1.05] font-bold tracking-[-0.035em]"
-          >
-            {hub.name}
-          </h1>
-          <p
-            class="text-secondary mt-2 max-w-[760px] text-base leading-relaxed"
-          >
-            {description}
-          </p>
-          <div class="mt-3 flex flex-wrap gap-2">
-            {
-              hub.protocolsSupported.map((protocol) => (
-                <ProtocolBadge slug={protocol} />
-              ))
-            }
-          </div>
-          <div class="mt-6 max-w-[760px]">
-            <StatGrid
-              columnsClass="grid-cols-3 max-md:grid-cols-1"
-              items={[
-                {
-                  value: formatCount.format(hub.deviceCount),
-                  label: "Devices",
-                },
-                {
-                  value: formatCount.format(hub.protocolsSupported.length),
-                  label: "Protocols",
-                },
-                {
-                  value: formatCount.format(hub.statusCounts.verified ?? 0),
-                  label: "Verified",
-                },
-              ]}
-            />
-          </div>
-        </div>
+    <EntityDetailHero
+      title={hub.name}
+      description={description}
+      statsWrapperClass="max-w-[760px]"
+      statsColumnsClass="grid-cols-4 max-md:grid-cols-2"
+      stats={[
+        {
+          value: formatCount.format(hub.compatibleDeviceCount),
+          label: "Devices",
+        },
+        {
+          value: formatCount.format(protocolsSupported.length),
+          label: "Protocols",
+        },
+        {
+          value: formatCount.format(hub.statusBreakdown.verified ?? 0),
+          label: "Verified",
+        },
+        { value: updatedLabel, label: "Updated", muted: true },
+      ]}
+    >
+      <div
+        slot="icon"
+        class="border-theme bg-elevated text-secondary flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border text-[34px] font-semibold"
+      >
+        H
       </div>
-    </section>
+      {
+        protocolsSupported.map((protocol) => (
+          <span
+            slot="badges"
+            class:list={[
+              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+              getProtocolStyle(protocol).badge,
+              getProtocolStyle(protocol).text,
+            ]}
+          >
+            {protocol}
+          </span>
+        ))
+      }
+    </EntityDetailHero>
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_320px]">
+    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1.55fr)_320px]">
       <div class="flex flex-col gap-6">
         <section>
           <SectionHeader
             eyebrow="Protocol coverage"
-            title="Coverage by family"
+            title="Coverage by protocol"
           />
           <div
             class="grid [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] gap-4"
           >
             {
-              hub.protocolsSupported.map((protocol, index) => {
-                const count = hub.protocolCounts[protocol] ?? 0;
-                const width =
-                  hub.deviceCount > 0
-                    ? Math.max(
-                        (count / hub.deviceCount) * 100,
-                        count > 0 ? 8 : 0,
-                      )
-                    : 0;
+              protocolsSupported.length > 0 ? (
+                protocolsSupported.map((protocol) => {
+                  const count = protocolCounts[protocol] ?? 0;
+                  const width =
+                    hub.compatibleDeviceCount > 0
+                      ? Math.max(
+                          (count / hub.compatibleDeviceCount) * 100,
+                          count > 0 ? 8 : 0,
+                        )
+                      : 0;
 
-                return (
-                  <div style={`animation-delay:${0.05 + index * 0.05}s`}>
+                  return (
                     <HubCoverageCard
                       protocol={protocol}
                       count={formatCount.format(count)}
                       verified={formatCount.format(
-                        hub.statusCounts.verified ?? 0,
+                        hub.statusBreakdown.verified ?? 0,
                       )}
                       reported={formatCount.format(
-                        hub.statusCounts.reported ?? 0,
+                        hub.statusBreakdown.reported ?? 0,
                       )}
                       untested={formatCount.format(
-                        hub.statusCounts.untested ?? 0,
+                        hub.statusBreakdown.untested ?? 0,
                       )}
                       width={width}
                     />
-                  </div>
-                );
-              })
-            }
-          </div>
-        </section>
-
-        <section
-          class="border-theme bg-surface animate-fade-in overflow-hidden rounded-2xl border"
-        >
-          <div
-            class="border-theme flex items-center justify-between border-b px-6 py-5"
-          >
-            <h2 class="text-2xl font-semibold tracking-tight">
-              Mapped Devices
-            </h2>
-            <span class="text-muted text-[13px]">
-              {formatCount.format(mappedDevices.length)} linked to this hub
-            </span>
-          </div>
-          <div class="grid gap-px bg-[var(--sp-border)] md:grid-cols-2">
-            {
-              mappedDevices.map((device) => {
-                const style = device.primaryProtocol
-                  ? getProtocolStyle(device.primaryProtocol)
-                  : {
-                      badge: "bg-badge",
-                      text: "text-secondary",
-                      shortLabel: "SP",
-                    };
-
-                return (
-                  <a
-                    href={`/devices/${device.slug}`}
-                    class="bg-surface text-primary flex items-center gap-3 px-5 py-4 transition-colors hover:bg-[var(--sp-table-row-hover)]"
-                  >
-                    <div class="bg-elevated text-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-semibold">
-                      {style.shortLabel}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap">
-                        {device.name}
-                      </div>
-                      <div class="text-muted text-xs">
-                        {device.manufacturer?.name ?? "Unknown manufacturer"} ·{" "}
-                        {device.model ?? "Model TBD"}
-                      </div>
-                    </div>
-                    <span
-                      class:list={[
-                        "inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                        style.badge,
-                        style.text,
-                      ]}
-                    >
-                      {formatProtocolLabel(device.primaryProtocol)}
-                    </span>
-                  </a>
-                );
-              })
-            }
-          </div>
-        </section>
-
-        <section
-          class="border-theme bg-surface animate-fade-in overflow-hidden rounded-2xl border"
-        >
-          <div
-            class="border-theme flex items-center justify-between border-b px-6 py-5"
-          >
-            <h2 class="text-2xl font-semibold tracking-tight">
-              Status Breakdown
-            </h2>
-            <span class="text-muted text-[13px]">Current catalog</span>
-          </div>
-          <table class="w-full border-collapse">
-            <thead>
-              <tr>
-                <th
-                  class="border-theme bg-elevated text-muted border-b px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase"
-                >
-                  Status
-                </th>
-                <th
-                  class="border-theme bg-elevated text-muted border-b px-6 py-2.5 text-left text-[11px] font-semibold tracking-wider uppercase"
-                >
-                  Coverage
-                </th>
-                <th
-                  class="border-theme bg-elevated text-muted border-b px-6 py-2.5 text-right text-[11px] font-semibold tracking-wider uppercase"
-                >
-                  Devices
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {
-                Object.entries(hub.statusCounts)
-                  .sort((left, right) => right[1] - left[1])
-                  .map(([status, count]) => {
-                    const width =
-                      hub.deviceCount > 0 ? (count / hub.deviceCount) * 100 : 0;
-
-                    return (
-                      <tr class="border-theme border-b last:border-b-0">
-                        <td class="px-6 py-4 text-sm font-medium">
-                          {sentenceCase(status)}
-                        </td>
-                        <td class="px-6 py-4">
-                          <div class="bg-bar-track h-2 overflow-hidden rounded-sm">
-                            <div
-                              class="bg-blue-gradient h-full rounded-sm"
-                              style={`width:${width}%`}
-                            ></div>
-                          </div>
-                        </td>
-                        <td class="text-secondary px-6 py-4 text-right font-mono text-sm">
-                          {formatCount.format(count)}
-                        </td>
-                      </tr>
-                    );
-                  })
-              }
-            </tbody>
-          </table>
-        </section>
-
-        <section
-          class="animate-fade-in text-secondary text-[15px] leading-relaxed"
-        >
-          <h2 class="mb-4 text-2xl font-semibold tracking-tight">
-            About {hub.name}
-          </h2>
-          <p class="mb-4">
-            {description}
-          </p>
-          <p>
-            Use this page to compare supported protocols, review device
-            coverage, and understand how compatibility is distributed across
-            verified, reported, and untested entries.
-          </p>
-        </section>
-      </div>
-
-      <aside class="flex flex-col gap-6 max-lg:order-first">
-        <div
-          class="animate-fade-in border-theme bg-surface shadow-card rounded-2xl border p-5"
-          style="animation-delay:0.1s"
-        >
-          <div class="mb-4 text-lg font-semibold tracking-tight">Hub Info</div>
-          <div class="flex flex-col gap-3 text-sm">
-            <div class="grid gap-3">
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Brand</span>
-                <span class="text-secondary font-medium">
-                  {hub.manufacturer?.name ?? "Unknown"}
-                </span>
-              </div>
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Last updated</span>
-                <span class="text-secondary font-medium">{updatedLabel}</span>
-              </div>
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Catalog refreshed</span>
-                <span class="text-secondary font-medium">{exportGenerated}</span
-                >
-              </div>
-              <div class="flex justify-between gap-4">
-                <span class="text-muted">Mapped devices</span>
-                <span class="text-secondary font-mono font-medium">
-                  {formatCount.format(hub.deviceCount)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="animate-fade-in border-theme bg-surface shadow-card rounded-2xl border p-5"
-          style="animation-delay:0.15s"
-        >
-          <div class="mb-4 text-lg font-semibold tracking-tight">
-            Related Hubs
-          </div>
-          <div class="flex flex-col gap-3">
-            {
-              relatedHubs.length > 0 ? (
-                relatedHubs.map((candidate) => (
-                  <a
-                    href={`/hubs/${candidate.slug}`}
-                    class="border-theme bg-elevated text-primary hover:border-theme-hover flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all hover:-translate-y-0.5"
-                  >
-                    <div class="text-secondary flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--sp-bg-surface)] text-sm font-semibold">
-                      H
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <div class="text-sm font-semibold">{candidate.name}</div>
-                      <div class="text-muted text-xs">
-                        {candidate.manufacturer?.name ?? "Independent"}
-                      </div>
-                    </div>
-                    <span class="text-primary font-mono text-sm font-semibold">
-                      {formatCount.format(candidate.deviceCount)}
-                    </span>
-                  </a>
-                ))
+                  );
+                })
               ) : (
-                <div class="text-muted text-[13px]">
-                  No similar hubs are listed right now.
+                <div class="border-theme bg-surface text-muted rounded-2xl border px-5 py-6 text-sm">
+                  Protocol coverage is not available for this hub yet.
                 </div>
               )
             }
           </div>
-        </div>
+        </section>
 
-        <ButtonLink
-          href={`/devices?hub=${encodeURIComponent(hub.slug)}`}
-          variant="secondary"
-          class="justify-center"
+        <section
+          class="border-theme bg-surface overflow-hidden rounded-2xl border"
         >
-          Browse all {formatCount.format(hub.deviceCount)} devices →
-        </ButtonLink>
+          <div
+            class="border-theme flex items-center justify-between border-b px-6 py-5"
+          >
+            <h2 class="text-2xl font-semibold tracking-tight">
+              Compatible Devices
+            </h2>
+            <span class="text-muted text-[13px]">
+              {formatCount.format(mappedDevices.length)} shown for this hub
+            </span>
+          </div>
+          <div class="grid gap-px bg-[var(--sp-border)] md:grid-cols-2">
+            {
+              mappedDevices.length > 0 ? (
+                mappedDevices.map((device) => {
+                  const style = getProtocolStyle(device.primaryProtocol);
+
+                  return (
+                    <a
+                      href={`/devices/${device.slug}`}
+                      class="bg-surface text-primary flex items-center gap-3 px-5 py-4 transition-colors hover:bg-[var(--sp-table-row-hover)]"
+                    >
+                      <div class="bg-elevated text-muted flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-semibold">
+                        {style.shortLabel}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="overflow-hidden text-sm font-medium text-ellipsis whitespace-nowrap">
+                          {device.name}
+                        </div>
+                        <div class="text-muted text-xs">
+                          {device.manufacturer?.name ?? "Unknown manufacturer"}{" "}
+                          · {device.model ?? "Model TBD"}
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })
+              ) : (
+                <div class="text-muted px-6 py-6 text-sm md:col-span-2">
+                  No compatible devices are listed for this hub yet.
+                </div>
+              )
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="flex flex-col gap-6">
+        <DetailSidebarCard
+          title="Hub info"
+          rows={[
+            {
+              label: "Manufacturer",
+              value: hub.manufacturer?.name ?? "Independent",
+            },
+            {
+              label: "Website",
+              value: hub.website
+                ? hub.website.replace(/^https?:\/\//, "")
+                : "Not listed",
+              href: hub.website,
+              external: Boolean(hub.website),
+            },
+            {
+              label: "Updated",
+              value: updatedLabel,
+            },
+          ]}
+        />
+
+        <EntityLinkList
+          title="Related hubs"
+          items={relatedHubItems}
+          emptyText="No related hubs are listed right now."
+        />
       </aside>
     </div>
 
-    <section class="border-theme mt-12 border-t py-12">
-      <SectionHeader
-        eyebrow="Catalog"
-        title={`Browse devices for ${hub.name}`}
-        description="Browse devices currently associated with this hub and refine the list by protocol, manufacturer, or key features."
-      />
-
-      <DeviceCatalogBrowser
-        client:load
-        catalogEndpoint="/catalog.json"
-        pageSize={12}
-        autoloadMode="scroll"
-        protocols={catalogPayload.facets.protocols}
-        manufacturers={catalogPayload.facets.manufacturers}
-        categoryCount={catalogPayload.facets.categories.length}
-        featureCounts={featureCounts}
-        lockedFilters={{ hubs: [hub.slug] }}
-        initialRender={{
-          products: initialCatalog.pagedProducts,
-          totalCount: initialCatalog.filteredProducts.length,
-          totalPages: initialCatalog.totalPages,
-          page: initialCatalog.safePage,
-          from: initialCatalog.from,
-          to: initialCatalog.to,
-        }}
-      />
-    </section>
+    <CatalogSection
+      title={`Browse devices for ${hub.name}`}
+      description="Browse devices currently associated with this commercial hub and refine by protocol, manufacturer, category, integration, platform, or key features."
+      initialCatalog={{
+        products: initialCatalog.pagedProducts,
+        totalCount: initialCatalog.filteredProducts.length,
+        totalPages: initialCatalog.totalPages,
+        page: initialCatalog.safePage,
+        from: initialCatalog.from,
+        to: initialCatalog.to,
+      }}
+      initialFacets={{
+        protocols: catalogPayload.facets.protocols,
+        manufacturers: catalogPayload.facets.manufacturers,
+        categories: catalogPayload.facets.categories,
+        integrations: catalogPayload.facets.integrations,
+        platforms: catalogPayload.facets.platforms,
+        hubs: catalogPayload.facets.hubs,
+        featureCounts,
+      }}
+      uiConfig={{ lockedFilters: { hubs: [hub.slug] } }}
+    />
   </div>
 </BaseLayout>

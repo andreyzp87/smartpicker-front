@@ -30,7 +30,7 @@ const { indexedDevices, searchChips, stats } = Astro.props;
       <span
         class="animate-pulse-dot h-1.5 w-1.5 rounded-full bg-[var(--sp-green)]"
       ></span>
-      {indexedDevices} devices indexed
+      {indexedDevices} devices in the catalog
     </div>
 
     <h1
@@ -46,8 +46,8 @@ const { indexedDevices, searchChips, stats } = Astro.props;
       class="animate-fade-in-up text-secondary mx-auto mb-9 max-w-[620px] text-[17px] leading-relaxed"
       style="animation-delay:0.2s"
     >
-      Search by device, hub, manufacturer, or protocol to review compatibility,
-      local control, and platform support in one clear catalog.
+      Search devices, integrations, platforms, manufacturers, and hubs to
+      check compatibility, local control, and setup requirements in one place.
     </p>
 
     <div class="animate-fade-in-up" style="animation-delay:0.3s">
@@ -56,7 +56,7 @@ const { indexedDevices, searchChips, stats } = Astro.props;
         searchChips={searchChips}
         searchEndpoint="/search.json"
         catalogHref="/devices"
-        searchEntityTypes={["device", "hub", "manufacturer"]}
+        searchEntityTypes={["device", "integration", "platform", "hub", "manufacturer"]}
       />
     </div>
 

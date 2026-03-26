@@ -1,0 +1,176 @@
+---
+interface DataTableColumn {
+  key: string;
+  label: string;
+  width?: string;
+  align?: "left" | "right";
+  mobileLabel?: string;
+  headerClass?: string;
+  cellClass?: string;
+}
+
+interface Props {
+  title: string;
+  subtitle?: string;
+  summaryLabel?: string;
+  columns: DataTableColumn[];
+  rows: unknown[];
+  mobileMode?: "stack" | "scroll";
+  cellComponent: any;
+  cellProps?: Record<string, unknown>;
+  getRowHref?: (row: unknown, index: number) => string | undefined;
+  class?: string;
+  rowClass?: string;
+}
+
+const {
+  title,
+  subtitle,
+  summaryLabel,
+  columns,
+  rows,
+  mobileMode = "stack",
+  cellComponent: CellComponent,
+  cellProps,
+  getRowHref,
+  class: className,
+  rowClass,
+} = Astro.props;
+
+const columnTemplate = columns
+  .map((column) => column.width ?? "minmax(0, 1fr)")
+  .join(" ");
+---
+
+<section
+  class:list={[
+    "border-theme bg-surface overflow-hidden rounded-2xl border",
+    className,
+  ]}
+>
+  <div
+    class="border-theme flex items-center justify-between gap-4 border-b px-6 py-5 max-md:flex-col max-md:items-start"
+  >
+    <div>
+      <h2 class="text-2xl font-semibold tracking-tight">{title}</h2>
+      {
+        subtitle && (
+          <p class="text-secondary mt-1 text-sm leading-relaxed">{subtitle}</p>
+        )
+      }
+    </div>
+    {summaryLabel && <span class="text-muted text-[13px]">{summaryLabel}</span>}
+  </div>
+
+  {
+    mobileMode === "scroll" ? (
+      <div class="overflow-x-auto">
+        <table class="min-w-full border-collapse">
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th
+                  class:list={[
+                    "border-theme bg-elevated text-muted border-b px-6 py-3 text-left text-[11px] font-semibold tracking-wider uppercase",
+                    column.align === "right" && "text-right",
+                    column.headerClass,
+                  ]}
+                >
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr
+                class:list={[
+                  "border-theme text-primary border-b transition-colors last:border-b-0 hover:bg-[var(--sp-table-row-hover)]",
+                  rowClass,
+                ]}
+              >
+                {columns.map((column, columnIndex) => (
+                  <td
+                    class:list={[
+                      "px-6 py-4",
+                      column.align === "right" && "text-right",
+                      column.cellClass,
+                    ]}
+                  >
+                    <CellComponent
+                      row={row}
+                      column={column}
+                      rowIndex={rowIndex}
+                      columnIndex={columnIndex}
+                      {...cellProps}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <>
+        <div
+          class="border-theme bg-elevated text-muted hidden gap-4 border-b px-5 py-3 text-[11px] font-semibold tracking-wider uppercase md:grid md:[grid-template-columns:var(--sp-data-table-columns)]"
+          style={`--sp-data-table-columns:${columnTemplate};`}
+        >
+          {columns.map((column) => (
+            <span
+              class:list={[
+                column.align === "right" && "text-right",
+                column.headerClass,
+              ]}
+            >
+              {column.label}
+            </span>
+          ))}
+        </div>
+        <div>
+          {rows.map((row, rowIndex) => {
+            const href = getRowHref?.(row, rowIndex);
+            const RowTag = href ? "a" : "div";
+
+            return (
+              <RowTag
+                href={href}
+                class:list={[
+                  "border-theme text-primary grid gap-3 border-b px-5 py-4 transition-colors last:border-b-0 hover:bg-[var(--sp-table-row-hover)] md:[grid-template-columns:var(--sp-data-table-columns)] md:items-center",
+                  rowClass,
+                ]}
+                style={`--sp-data-table-columns:${columnTemplate};`}
+              >
+                {columns.map((column, columnIndex) => {
+                  return (
+                    <div
+                      class:list={[
+                        "min-w-0",
+                        column?.align === "right" && "md:text-right",
+                        column?.cellClass,
+                      ]}
+                    >
+                      {(column?.mobileLabel ?? column?.label) && (
+                        <div class="text-muted mb-1 text-[11px] font-semibold tracking-wider uppercase md:hidden">
+                          {column.mobileLabel ?? column.label}
+                        </div>
+                      )}
+                      <CellComponent
+                        row={row}
+                        column={column}
+                        rowIndex={rowIndex}
+                        columnIndex={columnIndex}
+                        {...cellProps}
+                      />
+                    </div>
+                  );
+                })}
+              </RowTag>
+            );
+          })}
+        </div>
+      </>
+    )
+  }
+</section>

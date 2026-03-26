@@ -1,0 +1,84 @@
+---
+import { sentenceCase, getProtocolStyle } from "../../lib/ui";
+
+interface HubRow {
+  slug: string;
+  name: string;
+  compatibleDeviceCount: number;
+  manufacturer?: {
+    name: string;
+  } | null;
+  protocolsSupported: string[];
+  statusBreakdown: Record<string, number>;
+}
+
+interface Props {
+  row: HubRow;
+  column: {
+    key: string;
+  };
+}
+
+const { row: hub, column } = Astro.props;
+const statusEntries = Object.entries(hub.statusBreakdown) as [string, number][];
+---
+
+{
+  column.key === "hub" ? (
+    <div class="flex items-center gap-3">
+      <div class="bg-elevated text-secondary flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
+        H
+      </div>
+      <div>
+        <div class="text-primary text-sm font-semibold">{hub.name}</div>
+        <div class="text-muted text-xs">
+          {hub.manufacturer?.name ?? "Independent"}
+        </div>
+      </div>
+    </div>
+  ) : column.key === "protocols" ? (
+    <div class="flex flex-wrap gap-1">
+      {hub.protocolsSupported.length > 0 ? (
+        hub.protocolsSupported.map((protocol) => {
+          const style = getProtocolStyle(protocol);
+
+          return (
+            <span
+              class:list={[
+                "inline-flex h-7 w-7 items-center justify-center rounded-md text-[11px] font-semibold",
+                style.badge,
+                style.text,
+              ]}
+              title={protocol}
+            >
+              {style.shortLabel}
+            </span>
+          );
+        })
+      ) : (
+        <span class="text-muted text-xs">No device protocol data yet</span>
+      )}
+    </div>
+  ) : column.key === "status" ? (
+    <div class="text-muted text-xs">
+      {statusEntries
+        .filter(([, count]) => count > 0)
+        .map(
+          ([status, count]) =>
+            `${sentenceCase(status)} ${count.toLocaleString("en-US")}`,
+        )
+        .join(", ") || "No status rows yet"}
+    </div>
+  ) : column.key === "devices" ? (
+    <span class="font-mono text-sm font-medium">
+      {hub.compatibleDeviceCount.toLocaleString("en-US")}
+    </span>
+  ) : (
+    <a
+      href={`/hubs/${hub.slug}`}
+      class="text-blue hover:text-primary text-sm font-medium transition-colors"
+    >
+      View →
+    </a>
+  )
+}

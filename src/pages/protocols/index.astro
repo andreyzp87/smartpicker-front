@@ -1,161 +1,38 @@
 ---
+import type { ProtocolsResponse } from "../../../data/exports/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProtocolSummaryCard from "../../components/protocols/ProtocolSummaryCard.astro";
-import ButtonLink from "../../components/ui/ButtonLink.astro";
 import EmptyState from "../../components/ui/EmptyState.astro";
 import PageIntro from "../../components/ui/PageIntro.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
 import { readExportJson } from "../../lib/exports";
 import { getProtocolStyle } from "../../lib/ui";
 
-interface EntityRef {
-  slug: string;
-  name: string;
-}
-
-interface ProtocolSummary {
-  slug: string;
-  name: string;
-  title: string;
-  description: string;
-  deviceCount: number;
-  localControlCount: number;
-  cloudDependentCount: number;
-  matterCertifiedCount: number;
-}
-
-interface ProtocolsExport {
-  generated: string;
-  count: number;
-  protocols: ProtocolSummary[];
-}
-
-interface ProductSummary {
-  slug: string;
-  name: string;
-  model: string | null;
-  manufacturer: EntityRef | null;
-  primaryProtocol: string | null;
-  compatibleHubSlugs: string[];
-  compatibilityStatuses: string[];
-}
-
-interface ProductsExport {
-  count: number;
-  products: ProductSummary[];
-}
-
-interface HubSummary {
-  slug: string;
-  name: string;
-  protocolsSupported: string[];
-}
-
-interface HubsExport {
-  count: number;
-  hubs: HubSummary[];
-}
-
-const protocols = await readExportJson<ProtocolsExport>("protocols.json");
-const products = await readExportJson<ProductsExport>("products.json");
-const hubs = await readExportJson<HubsExport>("hubs.json");
-
-const productsByProtocol = new Map<string, ProductSummary[]>();
-
-for (const product of products.products) {
-  if (!product.primaryProtocol) {
-    continue;
-  }
-
-  const existing = productsByProtocol.get(product.primaryProtocol) ?? [];
-  existing.push(product);
-  productsByProtocol.set(product.primaryProtocol, existing);
-}
-
-const enrichedProtocols = protocols.protocols
-  .map((protocol) => {
-    const mappedProducts = productsByProtocol.get(protocol.slug) ?? [];
-    const manufacturerMap = new Map<
-      string,
-      { slug: string; name: string; count: number }
-    >();
-    const statusCounts = mappedProducts.reduce<Record<string, number>>(
-      (counts, product) => {
-        for (const status of product.compatibilityStatuses) {
-          counts[status] = (counts[status] ?? 0) + 1;
-        }
-
-        return counts;
-      },
-      {},
-    );
-
-    for (const product of mappedProducts) {
-      if (!product.manufacturer) {
-        continue;
-      }
-
-      const existing = manufacturerMap.get(product.manufacturer.slug);
-
-      if (existing) {
-        existing.count += 1;
-      } else {
-        manufacturerMap.set(product.manufacturer.slug, {
-          slug: product.manufacturer.slug,
-          name: product.manufacturer.name,
-          count: 1,
-        });
-      }
-    }
-
-    return {
-      ...protocol,
-      supportingHubCount: hubs.hubs.filter((hub) =>
-        hub.protocolsSupported.includes(protocol.slug),
-      ).length,
-      mappedHubCount: new Set(
-        mappedProducts.flatMap((product) => product.compatibleHubSlugs),
-      ).size,
-      manufacturerCount: manufacturerMap.size,
-      topManufacturers: [...manufacturerMap.values()]
-        .sort((left, right) =>
-          right.count === left.count
-            ? left.name.localeCompare(right.name)
-            : right.count - left.count,
-        )
-        .slice(0, 3),
-      statusCounts,
-    };
-  })
-  .sort((left, right) =>
-    right.deviceCount === left.deviceCount
-      ? left.name.localeCompare(right.name)
-      : right.deviceCount - left.deviceCount,
-  );
-
-const activeProtocolCount = enrichedProtocols.filter(
+const protocols = await readExportJson<ProtocolsResponse>("protocols.json");
+const sortedProtocols = [...protocols.protocols].sort((left, right) =>
+  right.deviceCount === left.deviceCount
+    ? left.name.localeCompare(right.name)
+    : right.deviceCount - left.deviceCount,
+);
+const activeProtocolCount = sortedProtocols.filter(
   (protocol) => protocol.deviceCount > 0,
 ).length;
-const emptyProtocolCount = enrichedProtocols.length - activeProtocolCount;
-const declaredHubCoverage = new Set(
-  hubs.hubs.flatMap((hub) => hub.protocolsSupported),
-).size;
-const spotlightProtocol = enrichedProtocols[0] ?? null;
-const generatedLabel = new Date(protocols.generated).toLocaleString("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+const spotlightProtocol = sortedProtocols[0] ?? null;
+const totalDeviceCount = sortedProtocols.reduce(
+  (sum, protocol) => sum + protocol.deviceCount,
+  0,
+);
 const formatCount = new Intl.NumberFormat("en-US");
 ---
 
 <BaseLayout
   title="Protocols | SmartPicker"
-  description="Compare smart home protocols by device coverage, brands, and supporting hubs."
+  description="Compare smart home protocols by device coverage, integrations, platforms, and commercial hub counts."
 >
   <div class="mx-auto max-w-[1200px] px-6">
     <PageIntro
       title="Protocols"
-      description="Understand the wireless and ecosystem standards behind the catalog, from widely supported protocols to newer families with limited device coverage."
+      description="Understand the wireless and ecosystem standards behind the catalog, then use protocol pages to move from device coverage to integrations, platforms, and commercial hubs."
       stats={[
         {
           value: formatCount.format(protocols.count),
@@ -166,19 +43,26 @@ const formatCount = new Intl.NumberFormat("en-US");
           label: "With mapped devices",
         },
         {
-          value: formatCount.format(products.count),
-          label: "Devices indexed",
+          value: formatCount.format(
+            sortedProtocols.reduce(
+              (sum, protocol) => sum + protocol.integrationCount,
+              0,
+            ),
+          ),
+          label: "Integration links",
         },
         {
-          value: formatCount.format(declaredHubCoverage),
-          label: "Hub protocol claims",
+          value: formatCount.format(
+            sortedProtocols.reduce((sum, protocol) => sum + protocol.hubCount, 0),
+          ),
+          label: "Commercial hubs",
         },
       ]}
     />
 
     {
       spotlightProtocol && (
-        <section class="mb-6 grid gap-5 rounded-2xl border border-theme bg-surface p-6 shadow-card lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+        <section class="mb-10 grid gap-5 rounded-2xl border border-theme bg-surface p-6 shadow-card lg:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
           <div class="flex flex-col gap-4">
             <div class="flex items-start gap-4">
               <div class:list={[
@@ -191,11 +75,7 @@ const formatCount = new Intl.NumberFormat("en-US");
               <div class="min-w-0 flex-1">
                 <SectionHeader eyebrow="Protocol highlight" title={spotlightProtocol.title} />
                 <p class="mt-3 max-w-[700px] text-sm leading-relaxed text-secondary">
-                  {
-                    spotlightProtocol.deviceCount > 0
-                      ? `${spotlightProtocol.name} currently has the strongest coverage in the catalog, making it the best place to compare devices, brands, and hub support side by side.`
-                      : `${spotlightProtocol.name} is tracked in SmartPicker, but there are no devices listed under this protocol yet.`
-                  }
+                  {spotlightProtocol.description}
                 </p>
               </div>
             </div>
@@ -206,162 +86,75 @@ const formatCount = new Intl.NumberFormat("en-US");
                   "h-full rounded-full",
                   getProtocolStyle(spotlightProtocol.slug).badge,
                 ]}
-                style={`width:${products.count > 0 ? (spotlightProtocol.deviceCount / products.count) * 100 : 0}%`}
+                style={`width:${totalDeviceCount > 0 ? (spotlightProtocol.deviceCount / totalDeviceCount) * 100 : 0}%`}
               >
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-              <div class="rounded-2xl border border-theme bg-elevated p-4">
-                <div class="text-lg font-bold font-mono tracking-tight">
-                  {formatCount.format(spotlightProtocol.deviceCount)}
-                </div>
-                <div class="text-[11px] tracking-wider uppercase text-muted">
-                  Devices
-                </div>
-              </div>
-              <div class="rounded-2xl border border-theme bg-elevated p-4">
-                <div class="text-lg font-bold font-mono tracking-tight">
-                  {formatCount.format(spotlightProtocol.manufacturerCount)}
-                </div>
-                <div class="text-[11px] tracking-wider uppercase text-muted">
-                  Manufacturers
-                </div>
-              </div>
-              <div class="rounded-2xl border border-theme bg-elevated p-4">
-                <div class="text-lg font-bold font-mono tracking-tight">
-                  {formatCount.format(spotlightProtocol.mappedHubCount)}
-                </div>
-                <div class="text-[11px] tracking-wider uppercase text-muted">
-                  Hubs with mapped devices
-                </div>
               </div>
             </div>
           </div>
 
-          <div class="flex flex-col justify-between gap-5">
-            <div>
-              <SectionHeader eyebrow="Snapshot highlight" title="Top manufacturers" />
-              <div class="flex flex-col gap-3">
-                {
-                  spotlightProtocol.topManufacturers.length > 0 ? (
-                    spotlightProtocol.topManufacturers.map((manufacturer) => (
-                      <a
-                        href={`/manufacturers/${manufacturer.slug}`}
-                        class="flex items-start justify-between gap-4 rounded-2xl border border-theme bg-elevated px-4 py-3 text-primary transition-all hover:-translate-y-0.5 hover:border-theme-hover"
-                      >
-                        <div>
-                          <div class="text-sm font-semibold">{manufacturer.name}</div>
-                          <div class="text-xs text-muted">
-                            {manufacturer.count} device
-                            {manufacturer.count === 1 ? "" : "s"}
-                          </div>
-                        </div>
-                        <span class="font-mono text-sm text-primary">
-                          {formatCount.format(manufacturer.count)}
-                        </span>
-                      </a>
-                    ))
-                  ) : (
-                    <EmptyState
-                      icon={getProtocolStyle(spotlightProtocol.slug).shortLabel}
-                      title="No manufacturers mapped yet"
-                      description="No manufacturers are currently listed under this protocol."
-                    />
-                  )
-                }
+          <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+            <div class="rounded-2xl border border-theme bg-elevated p-4">
+              <div class="text-lg font-bold font-mono tracking-tight">
+                {formatCount.format(spotlightProtocol.deviceCount)}
+              </div>
+              <div class="text-[11px] tracking-wider uppercase text-muted">
+                Devices
               </div>
             </div>
-
-            <div class="flex flex-wrap gap-3">
-              <ButtonLink href={`/protocols/${spotlightProtocol.slug}`}>
-                Open protocol page
-              </ButtonLink>
-              <ButtonLink
-                href={`/devices?protocol=${encodeURIComponent(spotlightProtocol.slug)}`}
-                variant="secondary"
-              >
-                Filter devices
-              </ButtonLink>
+            <div class="rounded-2xl border border-theme bg-elevated p-4">
+              <div class="text-lg font-bold font-mono tracking-tight">
+                {formatCount.format(spotlightProtocol.integrationCount)}
+              </div>
+              <div class="text-[11px] tracking-wider uppercase text-muted">
+                Integrations
+              </div>
+            </div>
+            <div class="rounded-2xl border border-theme bg-elevated p-4">
+              <div class="text-lg font-bold font-mono tracking-tight">
+                {formatCount.format(spotlightProtocol.platformCount)}
+              </div>
+              <div class="text-[11px] tracking-wider uppercase text-muted">
+                Platforms
+              </div>
+            </div>
+            <div class="rounded-2xl border border-theme bg-elevated p-4">
+              <div class="text-lg font-bold font-mono tracking-tight">
+                {formatCount.format(spotlightProtocol.hubCount)}
+              </div>
+              <div class="text-[11px] tracking-wider uppercase text-muted">
+                Hubs
+              </div>
             </div>
           </div>
         </section>
       )
     }
 
-    <section class="pb-6">
-      <div class="mb-5 flex items-baseline justify-between gap-4 max-md:flex-col max-md:items-start">
-        <div>
-          <SectionHeader
-            eyebrow="All protocol families"
-            title="Protocol coverage"
-            description={`Catalog refreshed ${generatedLabel}. Use these cards to compare device coverage, brands, and hub support across each protocol family.`}
+    {
+      sortedProtocols.length > 0 ? (
+        <section class="grid gap-4 pb-20 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+          {sortedProtocols.map((protocol) => (
+            <ProtocolSummaryCard
+              href={`/protocols/${protocol.slug}`}
+              slug={protocol.slug}
+              name={protocol.name}
+              description={protocol.description}
+              deviceCount={formatCount.format(protocol.deviceCount)}
+              integrationCount={formatCount.format(protocol.integrationCount)}
+              platformCount={formatCount.format(protocol.platformCount)}
+              hubCount={formatCount.format(protocol.hubCount)}
+              deviceShare={totalDeviceCount > 0 ? (protocol.deviceCount / totalDeviceCount) * 100 : 0}
+            />
+          ))}
+        </section>
+      ) : (
+        <div class="pb-20">
+          <EmptyState
+            title="No protocols available yet"
+            description="Protocol pages will appear here as coverage is added to the catalog."
           />
         </div>
-        <div class="text-sm text-muted">
-          {formatCount.format(emptyProtocolCount)} with limited or no current device coverage
-        </div>
-      </div>
-
-      <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
-        {
-          enrichedProtocols.map((protocol, index) => {
-            const deviceShare = products.count > 0
-              ? (protocol.deviceCount / products.count) * 100
-              : 0;
-            const statusEntries = Object.entries(protocol.statusCounts).sort(
-              (left, right) => right[1] - left[1],
-            );
-
-            return (
-              <div style={`animation-delay:${0.05 + index * 0.05}s`}>
-                <ProtocolSummaryCard
-                  href={`/protocols/${protocol.slug}`}
-                  slug={protocol.slug}
-                  name={protocol.name}
-                  description={protocol.description}
-                  deviceCount={formatCount.format(protocol.deviceCount)}
-                  manufacturerCount={formatCount.format(protocol.manufacturerCount)}
-                  mappedHubCount={formatCount.format(protocol.mappedHubCount)}
-                  supportingHubCount={formatCount.format(protocol.supportingHubCount)}
-                  deviceShare={deviceShare}
-                  statusEntries={statusEntries.map(([status, count]) => ({
-                    status,
-                    count,
-                  }))}
-                />
-              </div>
-            );
-          })
-        }
-      </div>
-    </section>
-
-    <section class="grid grid-cols-2 gap-4 pb-20 max-md:grid-cols-1">
-      <article class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-        <h3>How to use this page</h3>
-        <p class="mt-3 text-sm leading-relaxed text-secondary">
-          Start with device coverage, then compare manufacturer presence and hub
-          support. It is a fast way to understand whether a protocol is mature,
-          broadly supported, or still relatively niche in the current catalog.
-        </p>
-      </article>
-      <article class="rounded-2xl border border-theme bg-surface p-5 shadow-card">
-        <h3>Where to go next</h3>
-        <p class="mt-3 text-sm leading-relaxed text-secondary">
-          Open a protocol page for the connected view, or jump into the catalog
-          if you want to compare products immediately. Hubs and manufacturers
-          pages add another useful layer when you are deciding on an ecosystem.
-        </p>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <ButtonLink href="/devices" class="px-5 py-2.5">
-            Browse devices
-          </ButtonLink>
-          <ButtonLink href="/hubs" variant="secondary" class="px-5 py-2.5">
-            Explore hubs
-          </ButtonLink>
-        </div>
-      </article>
-    </section>
+      )
+    }
   </div>
 </BaseLayout>

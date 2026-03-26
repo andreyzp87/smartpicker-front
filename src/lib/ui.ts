@@ -39,6 +39,10 @@ export const COMPATIBILITY_STATUS_STYLES: Record<string, CompatibilityStatusStyl
     label: "Untested",
     className: "bg-untested text-muted",
   },
+  incompatible: {
+    label: "Incompatible",
+    className: "bg-red-subtle text-red",
+  },
   unsupported: {
     label: "Unsupported",
     className: "bg-red-subtle text-red",

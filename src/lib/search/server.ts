@@ -1,14 +1,19 @@
 import type {
   HubsResponse,
+  IntegrationsResponse,
   ManufacturersResponse,
+  PlatformsResponse,
   ProductsIndexResponse,
 } from "../../../data/exports/types";
 import { readExportJson } from "../exports";
 import type { SearchPayload } from "./shared";
 
 async function buildSearchPayload(): Promise<SearchPayload> {
-  const [products, hubs, manufacturers] = await Promise.all([
+  const [products, integrations, platforms, hubs, manufacturers] =
+    await Promise.all([
     readExportJson<ProductsIndexResponse>("products.json"),
+    readExportJson<IntegrationsResponse>("integrations.json"),
+    readExportJson<PlatformsResponse>("platforms.json"),
     readExportJson<HubsResponse>("hubs.json"),
     readExportJson<ManufacturersResponse>("manufacturers.json"),
   ]);
@@ -22,6 +27,7 @@ async function buildSearchPayload(): Promise<SearchPayload> {
 
       return {
         entityType: "device" as const,
+        id: product.id,
         slug: product.slug,
         name: product.name,
         manufacturerSlug: product.manufacturer?.slug ?? null,
@@ -34,7 +40,11 @@ async function buildSearchPayload(): Promise<SearchPayload> {
         cloudDependent: product.cloudDependent,
         requiresHub: product.requiresHub,
         matterCertified: product.matterCertified,
+        compatibleIntegrationCount: product.compatibleIntegrationSlugs.length,
+        compatiblePlatformCount: product.compatiblePlatformSlugs.length,
         compatibleHubCount: product.compatibleHubSlugs.length,
+        compatibleIntegrationSlugs: product.compatibleIntegrationSlugs,
+        compatiblePlatformSlugs: product.compatiblePlatformSlugs,
         compatibleHubSlugs: product.compatibleHubSlugs,
         compatibilityStatus: product.compatibilityStatuses[0] ?? null,
         updatedAt: Date.parse(product.updatedAt),
@@ -43,23 +53,41 @@ async function buildSearchPayload(): Promise<SearchPayload> {
     })
     .sort((left, right) => left.name.localeCompare(right.name));
 
+  const integrationEntries = integrations.integrations
+    .map((integration) => ({
+      entityType: "integration" as const,
+      slug: integration.slug,
+      name: integration.name,
+      manufacturerName: integration.manufacturer?.name ?? null,
+      primaryProtocol: integration.primaryProtocol,
+      integrationKind: integration.integrationKind,
+      platformCount: integration.platformSlugs.length,
+      compatibleDeviceCount: integration.compatibleDeviceCount,
+      searchText: integration.searchText.toLowerCase(),
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
+  const platformEntries = platforms.platforms
+    .map((platform) => ({
+      entityType: "platform" as const,
+      slug: platform.slug,
+      name: platform.name,
+      manufacturerName: platform.manufacturer?.name ?? null,
+      kind: platform.kind,
+      integrationCount: platform.integrationSlugs.length,
+      compatibleDeviceCount: platform.compatibleDeviceCountDerived,
+      searchText: platform.searchText.toLowerCase(),
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+
   const hubEntries = hubs.hubs
     .map((hub) => ({
       entityType: "hub" as const,
       slug: hub.slug,
       name: hub.name,
       manufacturerName: hub.manufacturer?.name ?? null,
-      protocolsSupported: hub.protocolsSupported,
-      deviceCount: hub.deviceCount,
-      searchText: [
-        hub.name,
-        hub.manufacturer?.name,
-        hub.description,
-        ...hub.protocolsSupported,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase(),
+      compatibleDeviceCount: hub.compatibleDeviceCount,
+      searchText: hub.searchText.toLowerCase(),
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
 
@@ -77,9 +105,13 @@ async function buildSearchPayload(): Promise<SearchPayload> {
     .sort((left, right) => left.name.localeCompare(right.name));
 
   return {
-    entries: [...deviceEntries, ...hubEntries, ...manufacturerEntries].sort(
-      (left, right) => left.name.localeCompare(right.name),
-    ),
+    entries: [
+      ...deviceEntries,
+      ...integrationEntries,
+      ...platformEntries,
+      ...hubEntries,
+      ...manufacturerEntries,
+    ].sort((left, right) => left.name.localeCompare(right.name)),
   };
 }
 

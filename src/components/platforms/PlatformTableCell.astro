@@ -1,0 +1,37 @@
+---
+import type { PlatformsResponse } from "../../../data/exports/types";
+import { sentenceCase } from "../../lib/ui";
+
+interface Props {
+  row: PlatformsResponse["platforms"][number];
+  column: {
+    key: string;
+  };
+}
+
+const { row: platform, column } = Astro.props;
+---
+
+{
+  column.key === "platform" ? (
+    <div>
+      <div class="text-sm font-semibold">{platform.name}</div>
+      <div class="text-muted mt-1 text-xs">
+        {platform.manufacturer?.name ?? "Independent"}
+      </div>
+    </div>
+  ) : column.key === "kind" ? (
+    <div class="text-secondary text-sm">
+      {sentenceCase(platform.kind.replace(/_/g, " "))}
+    </div>
+  ) : column.key === "integrations" ? (
+    <div class="text-secondary text-sm">
+      {platform.integrationSlugs.length} integration
+      {platform.integrationSlugs.length === 1 ? "" : "s"}
+    </div>
+  ) : (
+    <div class="text-secondary font-mono text-sm">
+      {platform.compatibleDeviceCountDerived.toLocaleString("en-US")} devices
+    </div>
+  )
+}

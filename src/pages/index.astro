@@ -1,98 +1,64 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import type {
+  HubsResponse,
+  IntegrationsResponse,
+  ManufacturersResponse,
+  PlatformsResponse,
+  ProductsIndexResponse,
+  ProtocolsResponse,
+  SiteResponse,
+} from "../../data/exports/types";
 import HomeFeaturedDeviceCard from "../components/home/HomeFeaturedDeviceCard.astro";
 import HomeHero from "../components/home/HomeHero.astro";
 import HomeHubCard from "../components/home/HomeHubCard.astro";
+import HomeIntegrationCard from "../components/home/HomeIntegrationCard.astro";
 import HomeManufacturerCard from "../components/home/HomeManufacturerCard.astro";
+import HomePlatformCard from "../components/home/HomePlatformCard.astro";
 import HomeProtocolCard from "../components/home/HomeProtocolCard.astro";
 import HomeSnapshotCta from "../components/home/HomeSnapshotCta.astro";
 import SectionHeader from "../components/ui/SectionHeader.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 import { readExportJson } from "../lib/exports";
 
-interface SiteExport {
-  generated: string;
-  stats: {
-    devices: number;
-    hubs: number;
-    manufacturers: number;
-    categories: number;
-    protocols: number;
-  };
-  featuredDeviceSlugs: string[];
-  recentlyUpdatedDeviceSlugs: string[];
-}
-
-interface ProductSummary {
-  slug: string;
-  name: string;
-  model: string | null;
-  primaryProtocol: string | null;
-  localControl: boolean | null;
-  cloudDependent: boolean | null;
-  requiresHub: boolean | null;
-  manufacturer: {
-    slug: string;
-    name: string;
-  } | null;
-  compatibleHubSlugs: string[];
-  compatibilityStatuses: string[];
-  updatedAt: string;
-}
-
-interface ProductsExport {
-  count: number;
-  products: ProductSummary[];
-}
-
-interface ProtocolSummary {
-  slug: string;
-  name: string;
-  description: string;
-  deviceCount: number;
-}
-
-interface ProtocolsExport {
-  protocols: ProtocolSummary[];
-}
-
-interface HubSummary {
-  slug: string;
-  name: string;
-  description: string | null;
-  deviceCount: number;
-  protocolsSupported: string[];
-}
-
-interface HubsExport {
-  hubs: HubSummary[];
-}
-
-interface ManufacturerSummary {
-  slug: string;
-  name: string;
-  deviceCount: number;
-}
-
-interface ManufacturersExport {
-  manufacturers: ManufacturerSummary[];
-}
-
-const site = await readExportJson<SiteExport>("site.json");
-const products = await readExportJson<ProductsExport>("products.json");
-const protocols = await readExportJson<ProtocolsExport>("protocols.json");
-const hubs = await readExportJson<HubsExport>("hubs.json");
-const manufacturers = await readExportJson<ManufacturersExport>(
-  "manufacturers.json",
-);
+const [site, products, protocols, integrations, platforms, hubs, manufacturers] =
+  await Promise.all([
+    readExportJson<SiteResponse>("site.json"),
+    readExportJson<ProductsIndexResponse>("products.json"),
+    readExportJson<ProtocolsResponse>("protocols.json"),
+    readExportJson<IntegrationsResponse>("integrations.json"),
+    readExportJson<PlatformsResponse>("platforms.json"),
+    readExportJson<HubsResponse>("hubs.json"),
+    readExportJson<ManufacturersResponse>("manufacturers.json"),
+  ]);
 
 const productBySlug = new Map(products.products.map((product) => [product.slug, product]));
+const integrationBySlug = new Map(
+  integrations.integrations.map((integration) => [integration.slug, integration]),
+);
+const platformBySlug = new Map(
+  platforms.platforms.map((platform) => [platform.slug, platform]),
+);
+const hubBySlug = new Map(hubs.hubs.map((hub) => [hub.slug, hub]));
+
 const featuredDevices = site.featuredDeviceSlugs
   .map((slug) => productBySlug.get(slug))
-  .filter((product): product is ProductSummary => Boolean(product))
+  .filter((product): product is ProductsIndexResponse["products"][number] => Boolean(product))
   .slice(0, 4);
 const recentDevices = site.recentlyUpdatedDeviceSlugs
   .map((slug) => productBySlug.get(slug))
-  .filter((product): product is ProductSummary => Boolean(product))
+  .filter((product): product is ProductsIndexResponse["products"][number] => Boolean(product))
+  .slice(0, 3);
+const featuredIntegrations = site.featuredIntegrationSlugs
+  .map((slug) => integrationBySlug.get(slug))
+  .filter((integration): integration is IntegrationsResponse["integrations"][number] => Boolean(integration))
+  .slice(0, 3);
+const featuredPlatforms = site.featuredPlatformSlugs
+  .map((slug) => platformBySlug.get(slug))
+  .filter((platform): platform is PlatformsResponse["platforms"][number] => Boolean(platform))
+  .slice(0, 3);
+const featuredHubs = site.featuredHubSlugs
+  .map((slug) => hubBySlug.get(slug))
+  .filter((hub): hub is HubsResponse["hubs"][number] => Boolean(hub))
   .slice(0, 3);
 const topManufacturers = [...manufacturers.manufacturers]
   .sort((left, right) => right.deviceCount - left.deviceCount)
@@ -100,9 +66,9 @@ const topManufacturers = [...manufacturers.manufacturers]
 
 const searchChips = [
   products.products[0]?.manufacturer?.name,
-  featuredDevices[0]?.name,
+  featuredIntegrations[0]?.name,
+  featuredPlatforms[0]?.name,
   protocols.protocols.find((protocol) => protocol.deviceCount > 0)?.name,
-  recentDevices[0]?.model,
 ]
   .filter((value): value is string => Boolean(value))
   .slice(0, 4);
@@ -115,28 +81,28 @@ const generatedLabel = new Date(site.generated).toLocaleString("en-US", {
 const recentDevicesLabel =
   recentDevices.length > 0
     ? recentDevices.map((device) => device.name).join(", ")
-    : "the latest published device entries";
+    : "recently refreshed device pages";
 ---
 
 <BaseLayout
   title="SmartPicker | Find Compatible Smart Home Devices"
-  description="Search smart home devices, compare protocol coverage, and explore hub compatibility with SmartPicker."
+  description="Search smart home devices, compare protocol coverage, and explore compatibility through integrations, platforms, and commercial hubs."
 >
   <HomeHero
     indexedDevices={formatCount.format(site.stats.devices)}
     searchChips={searchChips}
     stats={[
       { value: formatCount.format(site.stats.devices), label: "Devices" },
-      { value: formatCount.format(site.stats.manufacturers), label: "Manufacturers" },
+      { value: formatCount.format(site.stats.integrations), label: "Integrations" },
+      { value: formatCount.format(site.stats.platforms), label: "Platforms" },
       { value: formatCount.format(site.stats.hubs), label: "Hubs" },
-      { value: formatCount.format(site.stats.protocols), label: "Protocols" },
     ]}
   />
 
   <section id="protocols" class="mx-auto mt-20 max-w-[1200px] px-6">
     <SectionHeader
       title="Browse by Protocol"
-      description="Compare major smart home standards and see how much device and hub coverage each one has."
+      description="Compare the main smart home standards and see where each one shows up across devices, integrations, platforms, and hubs."
       actionHref="/protocols"
       actionLabel="See all protocols"
     />
@@ -156,8 +122,81 @@ const recentDevicesLabel =
 
   <section class="mx-auto mt-16 max-w-[1200px] px-6">
     <SectionHeader
-      title="Featured Devices"
-      description="A curated look at notable devices, with protocol and hub support visible at a glance."
+      title="Featured Integrations"
+      description="The software layers that connect devices to the rest of your smart home stack."
+      actionHref="/integrations"
+      actionLabel="View all"
+    />
+
+    <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+      {
+        featuredIntegrations.map((integration) => (
+          <HomeIntegrationCard
+            href={`/integrations/${integration.slug}`}
+            name={integration.name}
+            primaryProtocol={integration.primaryProtocol}
+            integrationKind={integration.integrationKind}
+            compatibleDeviceCount={formatCount.format(integration.compatibleDeviceCount)}
+            platformCount={integration.platformSlugs.length}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto mt-16 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Featured Platforms"
+      description="See which platforms have the widest support and which integrations make that support possible."
+      actionHref="/platforms"
+      actionLabel="View all"
+    />
+
+    <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+      {
+        featuredPlatforms.map((platform) => (
+          <HomePlatformCard
+            href={`/platforms/${platform.slug}`}
+            name={platform.name}
+            kind={platform.kind}
+            compatibleDeviceCount={formatCount.format(platform.compatibleDeviceCountDerived)}
+            integrationCount={platform.integrationSlugs.length}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto mt-16 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Commercial Hubs"
+      description="Compare hub ecosystems separately, so it is easier to judge device support before you commit to hardware."
+      actionHref="/hubs"
+      actionLabel="View all"
+    />
+
+    <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
+      {
+        featuredHubs.map((hub) => (
+          <HomeHubCard
+            href={`/hubs/${hub.slug}`}
+            name={hub.name}
+            manufacturerName={hub.manufacturer?.name ?? "Independent"}
+            description={
+              hub.searchText ??
+              `${hub.manufacturer?.name ?? "Smart home"} hub with support for ${formatCount.format(hub.compatibleDeviceCount)} device${hub.compatibleDeviceCount === 1 ? "" : "s"}.`
+            }
+            deviceCount={formatCount.format(hub.compatibleDeviceCount)}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="mx-auto mt-16 max-w-[1200px] px-6">
+    <SectionHeader
+      title="Recently Updated Devices"
+      description="Recently refreshed device pages, with compatibility details and key setup notes ready to browse."
       actionHref="/devices"
       actionLabel="Browse all"
     />
@@ -172,6 +211,8 @@ const recentDevicesLabel =
             model={device.model}
             protocolSlug={device.primaryProtocol}
             compatibilityStatus={device.compatibilityStatuses[0] ?? null}
+            integrationCount={device.compatibleIntegrationSlugs.length}
+            platformCount={device.compatiblePlatformSlugs.length}
             hubCount={device.compatibleHubSlugs.length}
             requiresHub={device.requiresHub}
             localControl={device.localControl}
@@ -184,35 +225,12 @@ const recentDevicesLabel =
     </div>
   </section>
 
-  <section class="mx-auto mt-16 max-w-[1200px] px-6">
-    <SectionHeader
-      title="Compatible Hubs & Platforms"
-      description="Compare controllers and platforms by supported protocols and connected devices."
-      actionHref="/hubs"
-      actionLabel="View all"
-    />
-
-    <div class="grid grid-cols-3 gap-3 max-md:grid-cols-1">
-      {
-        hubs.hubs.map((hub) => (
-          <HomeHubCard
-            href={`/hubs/${hub.slug}`}
-            name={hub.name}
-            protocolSlugs={hub.protocolsSupported}
-            description={hub.description}
-            deviceCount={formatCount.format(hub.deviceCount)}
-          />
-        ))
-      }
-    </div>
-  </section>
-
   <section id="manufacturers" class="mx-auto mt-16 max-w-[1200px] px-6">
     <SectionHeader
       title="Manufacturers"
       description="Explore the leading smart home brands currently represented in the catalog."
-      actionHref="/devices"
-      actionLabel="Explore devices"
+      actionHref="/manufacturers"
+      actionLabel="Explore manufacturers"
     />
 
     <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">

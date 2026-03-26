@@ -1,0 +1,46 @@
+---
+import MetricCard from "./MetricCard.astro";
+
+interface MetricCardItem {
+  value: string | number;
+  label: string;
+  description?: string;
+  tone?: "default" | "accent";
+}
+
+interface Props {
+  items: MetricCardItem[];
+  tone?: "default" | "accent";
+  gridCols?: string;
+  emptyMessage?: string;
+}
+
+const {
+  items,
+  tone = "default",
+  gridCols = "md:grid-cols-3",
+  emptyMessage,
+} = Astro.props;
+---
+
+<div class:list={["grid gap-3", gridCols]}>
+  {
+    items.length > 0
+      ? items.map((item) => (
+          <MetricCard
+            value={item.value}
+            label={item.label}
+            description={item.description}
+            tone={item.tone ?? tone}
+          />
+        ))
+      : emptyMessage && (
+          <div
+            class="border-theme bg-surface text-muted rounded-2xl border px-5 py-6 text-sm"
+            style="grid-column: 1 / -1;"
+          >
+            {emptyMessage}
+          </div>
+        )
+  }
+</div>

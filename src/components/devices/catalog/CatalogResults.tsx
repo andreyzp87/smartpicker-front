@@ -55,14 +55,16 @@ function CatalogGridCard({ product }: { product: CatalogProduct }) {
           </span>
         )}
       </div>
-      <div className="border-theme mt-2.5 flex items-center gap-1 border-t pt-2.5">
-        <span className="bg-green-subtle text-green flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold">
-          ✓
+      <div className="border-theme mt-2.5 grid grid-cols-3 gap-2 border-t pt-2.5 text-[11px] text-muted">
+        <span className="rounded-md bg-badge px-2 py-1 text-center">
+          {product.compatibleIntegrationCount} integration
+          {product.compatibleIntegrationCount === 1 ? "" : "s"}
         </span>
-        <span className="bg-green-subtle text-green flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold">
-          {product.compatibleHubCount}
+        <span className="rounded-md bg-badge px-2 py-1 text-center">
+          {product.compatiblePlatformCount} platform
+          {product.compatiblePlatformCount === 1 ? "" : "s"}
         </span>
-        <span className="text-muted ml-auto text-[11px]">
+        <span className="rounded-md bg-badge px-2 py-1 text-center">
           {product.compatibleHubCount} hub
           {product.compatibleHubCount === 1 ? "" : "s"}
         </span>
@@ -73,11 +75,15 @@ function CatalogGridCard({ product }: { product: CatalogProduct }) {
 
 function CatalogListRow({ product }: { product: CatalogProduct }) {
   const style = getProtocolStyle(product.primaryProtocol);
+  const compatibility = getCompatibilityStatusStyle(
+    product.compatibilityStatus,
+    "Reported",
+  );
 
   return (
     <a
       href={`/devices/${product.slug}`}
-      className="bg-surface text-primary hover:border-theme-hover hover:shadow-card grid min-w-[720px] grid-cols-[52px_1fr_120px_120px_100px_140px] items-center gap-4 rounded-[10px] border border-transparent px-4 py-3 transition-all"
+      className="bg-surface text-primary hover:border-theme-hover hover:shadow-card grid min-w-[820px] grid-cols-[52px_1fr_120px_120px_100px_170px_110px] items-center gap-4 rounded-[10px] border border-transparent px-4 py-3 transition-all"
     >
       <div className="bg-elevated text-muted flex h-11 w-11 items-center justify-center rounded-lg text-sm font-semibold">
         {style.shortLabel}
@@ -105,14 +111,25 @@ function CatalogListRow({ product }: { product: CatalogProduct }) {
       <span className="text-secondary text-xs font-medium">
         {formatBooleanFact(product.localControl)}
       </span>
-      <div className="flex items-center gap-0.5">
-        <span className="bg-green-subtle text-green flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold">
-          {product.compatibleHubCount}
+      <div className="flex flex-wrap gap-1 text-[11px] text-muted">
+        <span className="rounded-md bg-badge px-2 py-1">
+          I {product.compatibleIntegrationCount}
         </span>
-        <span className="text-muted ml-auto text-[11px]">
-          {product.compatibleHubCount}
+        <span className="rounded-md bg-badge px-2 py-1">
+          P {product.compatiblePlatformCount}
+        </span>
+        <span className="rounded-md bg-badge px-2 py-1">
+          H {product.compatibleHubCount}
         </span>
       </div>
+      <span
+        className={joinClasses(
+          "inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium",
+          compatibility.className,
+        )}
+      >
+        {compatibility.label}
+      </span>
     </a>
   );
 }
@@ -188,13 +205,14 @@ export function CatalogResults({
   if (view === "list") {
     return (
       <div className="flex flex-col gap-0.5 overflow-x-auto">
-        <div className="text-muted grid min-w-[720px] grid-cols-[52px_1fr_120px_120px_100px_140px] items-center gap-4 px-4 py-2 text-[11px] font-semibold tracking-wider uppercase">
+        <div className="text-muted grid min-w-[820px] grid-cols-[52px_1fr_120px_120px_100px_170px_110px] items-center gap-4 px-4 py-2 text-[11px] font-semibold tracking-wider uppercase">
           <span></span>
           <span>Device</span>
           <span>Protocol</span>
           <span>Category</span>
           <span>Local</span>
-          <span>Hubs</span>
+          <span>Works With</span>
+          <span>Status</span>
         </div>
 
         {products.map((product) => (
