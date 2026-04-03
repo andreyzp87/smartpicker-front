@@ -35,7 +35,7 @@ const { row: integration, column } = Astro.props;
         : "No linked platforms"}
     </div>
   ) : (
-    <div class="text-secondary font-mono text-sm">
+    <div class="text-secondary tabular-nums text-sm">
       {integration.compatibleDeviceCount.toLocaleString("en-US")} devices
     </div>
   )

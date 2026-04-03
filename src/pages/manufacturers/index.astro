@@ -3,6 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import ManufacturerListCard from "../../components/manufacturers/ManufacturerListCard.astro";
 import ManufacturerTopCard from "../../components/manufacturers/ManufacturerTopCard.astro";
 import PageIntro from "../../components/ui/PageIntro.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
 import { readExportJson } from "../../lib/exports";
 
 interface EntityRef {
@@ -160,9 +161,12 @@ const formatCount = new Intl.NumberFormat("en-US");
       />
     </label>
 
-    <div class="mb-4 text-[13px] font-semibold tracking-wider uppercase text-muted">
-      Most Devices
-    </div>
+    <SectionHeader
+      eyebrow="Top brands"
+      title="Manufacturers with the most devices"
+      description="Start with the brands that currently have the broadest catalog coverage."
+      class="mb-4"
+    />
 
     <section
       class="mb-7 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(250px,1fr))]"
@@ -190,6 +194,13 @@ const formatCount = new Intl.NumberFormat("en-US");
         ))
       }
     </section>
+
+    <SectionHeader
+      eyebrow="A to Z"
+      title="Browse all manufacturers"
+      description="Jump to a letter, then explore every manufacturer listed in the catalog."
+      class="mt-12 mb-4"
+    />
 
     <div class="mb-6 flex flex-wrap gap-1" id="manufacturer-alpha-nav">
       {
@@ -222,12 +233,12 @@ const formatCount = new Intl.NumberFormat("en-US");
           .filter((letter) => activeLetters.has(letter))
           .map((letter) => (
             <section class="mb-8" data-letter-section={letter}>
-              <h2
+              <h3
                 class="mb-4 border-b border-theme pb-2 text-xl font-bold tracking-tight"
                 id={`letter-${letter === "#" ? "num" : letter}`}
               >
                 {letter}
-              </h2>
+              </h3>
               <div class="mb-8 grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
                 {
                   manufacturersByLetter[letter].map((manufacturer) => {

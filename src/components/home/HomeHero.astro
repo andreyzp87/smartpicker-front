@@ -68,7 +68,7 @@ const { indexedDevices, searchChips, stats } = Astro.props;
         stats.map((stat, index) => (
           <>
             <div class="min-w-[120px] text-center max-sm:min-w-[calc(50%-0.5rem)]">
-              <div class="text-primary font-mono text-[28px] font-bold tracking-tight">
+              <div class="text-primary tabular-nums text-[28px] font-bold tracking-tight">
                 {stat.value}
               </div>
               <div class="text-muted mt-0.5 text-[13px]">{stat.label}</div>

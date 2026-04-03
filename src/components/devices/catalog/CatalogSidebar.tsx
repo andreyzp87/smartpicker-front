@@ -87,7 +87,7 @@ function FilterListSection<T extends { name: string; count: number }>({
     <section className="flex flex-col gap-3.5">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-primary">
         {title}
-        <span className="font-mono text-xs text-muted">{options.length}</span>
+        <span className="tabular-nums text-xs text-muted">{options.length}</span>
       </h3>
       <SearchInput
         id={`${title.toLowerCase().replace(/\s+/g, "-")}-filter-search`}
@@ -121,7 +121,7 @@ function FilterListSection<T extends { name: string; count: number }>({
                     </span>
                   )}
                 </span>
-                <span className="ml-auto font-mono text-[11px] text-muted">
+                <span className="ml-auto tabular-nums text-[11px] text-muted">
                   {new Intl.NumberFormat("en-US").format(option.count)}
                 </span>
               </button>
@@ -191,7 +191,7 @@ export function CatalogSidebar({
                   className={`${styles.badge} ${styles.text} inline-flex items-center gap-1 rounded-full border border-badge px-3 py-1 text-xs font-semibold transition-all hover:-translate-y-px hover:border-theme-hover data-[filter-active=true]:border-[var(--sp-blue-500)] data-[filter-active=true]:shadow-[0_0_0_4px_rgba(59,130,246,0.12)]`}
                 >
                   <span>{protocol.name}</span>
-                  <span className="font-mono text-[10px] opacity-70">
+                  <span className="tabular-nums text-[10px] opacity-70">
                     {new Intl.NumberFormat("en-US").format(count)}
                   </span>
                 </button>
@@ -284,7 +284,7 @@ export function CatalogSidebar({
                 >
                   <span>{label}</span>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono text-[11px] text-muted">
+                    <span className="tabular-nums text-[11px] text-muted">
                       {featureCounts[key]}
                     </span>
                     <ToggleSwitch active={active} />

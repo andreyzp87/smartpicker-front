@@ -16,7 +16,7 @@ const { href, name, deviceCount, initials } = Astro.props;
     {initials}
   </div>
   <div class="text-base font-semibold">{name}</div>
-  <div class="mt-1 font-mono text-[13px] text-muted">{deviceCount} devices</div>
+  <div class="mt-1 tabular-nums text-[13px] text-muted">{deviceCount} devices</div>
   <ButtonLink href={href} variant="link" class="mt-4">
     View manufacturer →
   </ButtonLink>

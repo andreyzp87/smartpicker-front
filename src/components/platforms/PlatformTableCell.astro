@@ -30,7 +30,7 @@ const { row: platform, column } = Astro.props;
       {platform.integrationSlugs.length === 1 ? "" : "s"}
     </div>
   ) : (
-    <div class="text-secondary font-mono text-sm">
+    <div class="text-secondary tabular-nums text-sm">
       {platform.compatibleDeviceCountDerived.toLocaleString("en-US")} devices
     </div>
   )

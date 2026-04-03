@@ -2,6 +2,9 @@
 import BrandMark from "../components/layout/BrandMark.astro";
 import FooterLinkColumn from "../components/layout/FooterLinkColumn.astro";
 import "../styles/global.css";
+import dmSans400 from "@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff2";
+import dmSans500 from "@fontsource/dm-sans/files/dm-sans-latin-500-normal.woff2";
+import dmSans700 from "@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff2";
 
 interface Props {
   title?: string;
@@ -60,6 +63,9 @@ function navLinkClass(path: string): string {
 <html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
+    <link rel="preload" href={dmSans400} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={dmSans500} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={dmSans700} as="font" type="font/woff2" crossorigin />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

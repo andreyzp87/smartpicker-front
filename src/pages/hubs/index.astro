@@ -157,44 +157,52 @@ const hubColumns = [
       cellComponent={HubTableCell}
     />
 
-    <section class="grid gap-4 pt-6 pb-20 md:grid-cols-2">
-      <article
-        class="border-theme bg-surface shadow-card rounded-2xl border p-6"
-      >
-        <h3
-          class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight"
+    <section class="pt-6 pb-20">
+      <SectionHeader
+        eyebrow="Definitions"
+        title="How hub pages are organized"
+        description="These notes explain what counts as a commercial hub in SmartPicker and why those pages stay separate from platforms and integrations."
+      />
+
+      <div class="grid gap-4 md:grid-cols-2">
+        <article
+          class="border-theme bg-surface shadow-card rounded-2xl border p-6"
         >
-          <span
-            class="bg-elevated inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm"
+          <h3
+            class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight"
           >
-            H
-          </span>
-          What counts as a hub here?
-        </h3>
-        <p class="text-secondary text-sm leading-relaxed">
-          Hub pages are now explicitly about commercial hubs and ecosystems.
-          Open platforms and integrations are tracked on their own routes.
-        </p>
-      </article>
-      <article
-        class="border-theme bg-surface shadow-card rounded-2xl border p-6"
-      >
-        <h3
-          class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight"
+            <span
+              class="bg-elevated inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm"
+            >
+              H
+            </span>
+            What counts as a hub here?
+          </h3>
+          <p class="text-secondary text-sm leading-relaxed">
+            Hub pages are now explicitly about commercial hubs and ecosystems.
+            Open platforms and integrations are tracked on their own routes.
+          </p>
+        </article>
+        <article
+          class="border-theme bg-surface shadow-card rounded-2xl border p-6"
         >
-          <span
-            class="bg-elevated inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm"
+          <h3
+            class="mb-3 flex items-center gap-2 text-lg font-bold tracking-tight"
           >
-            ↔
-          </span>
-          Why separate them?
-        </h3>
-        <p class="text-secondary text-sm leading-relaxed">
-          A commercial hub is one compatibility target, but it is not the same
-          thing as an integration or an automation platform. SmartPicker keeps
-          those layers distinct so support is easier to interpret.
-        </p>
-      </article>
+            <span
+              class="bg-elevated inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm"
+            >
+              ↔
+            </span>
+            Why separate them?
+          </h3>
+          <p class="text-secondary text-sm leading-relaxed">
+            A commercial hub is one compatibility target, but it is not the same
+            thing as an integration or an automation platform. SmartPicker keeps
+            those layers distinct so support is easier to interpret.
+          </p>
+        </article>
+      </div>
     </section>
   </div>
 </BaseLayout>

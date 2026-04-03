@@ -2,6 +2,7 @@
 import DeviceCatalogBrowser from "../../components/devices/DeviceCatalogBrowser";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import PageIntro from "../../components/ui/PageIntro.astro";
+import SectionHeader from "../../components/ui/SectionHeader.astro";
 import { createDefaultCatalogState, getCatalogResults } from "../../lib/catalog/core";
 import { readExportJson } from "../../lib/exports";
 import { getCatalogPayload } from "../../lib/catalog/server";
@@ -57,27 +58,34 @@ const formatCount = new Intl.NumberFormat("en-US");
       ]}
     />
 
-    <DeviceCatalogBrowser
-      client:load
-      initialCatalog={{
-        products: initialCatalog.pagedProducts,
-        totalCount: initialCatalog.filteredProducts.length,
-        totalPages: initialCatalog.totalPages,
-        page: initialCatalog.safePage,
-        from: initialCatalog.from,
-        to: initialCatalog.to,
-      }}
-      initialFacets={{
-        protocols: catalogPayload.facets.protocols,
-        manufacturers: catalogPayload.facets.manufacturers,
-        categories: catalogPayload.facets.categories,
-        integrations: catalogPayload.facets.integrations,
-        platforms: catalogPayload.facets.platforms,
-        hubs: catalogPayload.facets.hubs,
-        featureCounts,
-      }}
-      endpoints={{ catalog: "/catalog.json", autoloadMode: "scroll" }}
-      uiConfig={{ pageSize: 12 }}
-    />
+    <section class="pb-20">
+      <SectionHeader
+        eyebrow="Catalog"
+        title="Filter and compare devices"
+        description="Use the catalog controls below to narrow the device list by protocol, manufacturer, category, integrations, platforms, hubs, and key compatibility features."
+      />
+      <DeviceCatalogBrowser
+        client:load
+        initialCatalog={{
+          products: initialCatalog.pagedProducts,
+          totalCount: initialCatalog.filteredProducts.length,
+          totalPages: initialCatalog.totalPages,
+          page: initialCatalog.safePage,
+          from: initialCatalog.from,
+          to: initialCatalog.to,
+        }}
+        initialFacets={{
+          protocols: catalogPayload.facets.protocols,
+          manufacturers: catalogPayload.facets.manufacturers,
+          categories: catalogPayload.facets.categories,
+          integrations: catalogPayload.facets.integrations,
+          platforms: catalogPayload.facets.platforms,
+          hubs: catalogPayload.facets.hubs,
+          featureCounts,
+        }}
+        endpoints={{ catalog: "/catalog.json", autoloadMode: "scroll" }}
+        uiConfig={{ pageSize: 12 }}
+      />
+    </section>
   </div>
 </BaseLayout>

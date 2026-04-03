@@ -70,7 +70,7 @@ const statusEntries = Object.entries(hub.statusBreakdown) as [string, number][];
         .join(", ") || "No status rows yet"}
     </div>
   ) : column.key === "devices" ? (
-    <span class="font-mono text-sm font-medium">
+    <span class="tabular-nums text-sm font-medium">
       {hub.compatibleDeviceCount.toLocaleString("en-US")}
     </span>
   ) : (

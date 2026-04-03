@@ -31,18 +31,23 @@ export function CatalogToolbar({
         onChange={onSearchChange}
       />
 
-      <select
-        id="catalog-sort"
-        value={sort}
-        onChange={(event) => onSortChange(event.target.value as SortMode)}
-        className="border-theme bg-surface text-primary w-full max-w-[190px] cursor-pointer rounded-[10px] border px-3.5 py-3 text-[13px] transition-all outline-none focus:border-[rgba(37,99,235,0.4)] focus:shadow-[var(--sp-shadow-search)]"
-      >
-        <option value="name-asc">Sort: Name A-Z</option>
-        <option value="name-desc">Sort: Name Z-A</option>
-        <option value="newest">Sort: Newest first</option>
-        <option value="manufacturer">Sort: Manufacturer</option>
-        <option value="compatibility">Sort: Most compatible</option>
-      </select>
+      <div className="w-full max-w-[190px]">
+        <label htmlFor="catalog-sort" className="sr-only">
+          Sort catalog results
+        </label>
+        <select
+          id="catalog-sort"
+          value={sort}
+          onChange={(event) => onSortChange(event.target.value as SortMode)}
+          className="border-theme bg-surface text-primary w-full cursor-pointer rounded-[10px] border px-3.5 py-3 text-[13px] transition-all outline-none focus:border-[rgba(37,99,235,0.4)] focus:shadow-[var(--sp-shadow-search)]"
+        >
+          <option value="name-asc">Sort: Name A-Z</option>
+          <option value="name-desc">Sort: Name Z-A</option>
+          <option value="newest">Sort: Newest first</option>
+          <option value="manufacturer">Sort: Manufacturer</option>
+          <option value="compatibility">Sort: Most compatible</option>
+        </select>
+      </div>
 
       <div className="border-theme flex overflow-hidden rounded-[10px] border">
         {(["grid", "list"] as const).map((nextView) => (
