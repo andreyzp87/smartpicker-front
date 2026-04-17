@@ -1,17 +1,90 @@
 # SmartPicker Frontend
 
-Astro frontend for `smartpicker.io`, built as a static site that can be deployed to Cloudflare Pages.
+SmartPicker is an Astro-based frontend for a smart home compatibility catalog. It renders static pages for devices, integrations, platforms, hubs, manufacturers, protocols, and categories using exported JSON data in `data/exports`.
 
-## Setup
+The site is static-first, search-friendly, and deploys cleanly to Cloudflare Pages. Interactive experiences such as catalog filtering and search are handled with React islands fed by prerendered JSON endpoints.
+
+## What This Project Does
+
+- Renders browsable catalog pages for smart home entities
+- Builds device detail pages with compatibility metadata
+- Exposes prerendered machine-readable endpoints at `/catalog.json`, `/search.json`, and `/sitemap.xml`
+- Supports local filesystem exports during development and remote export fetching when needed
+- Deploys as a static site to Cloudflare Pages
+
+## Stack
+
+- Astro 6
+- React 19 islands via `@astrojs/react`
+- TypeScript
+- Tailwind CSS v4
+- Vite 7
+- Cloudflare Pages + Wrangler
+
+## Project Structure
+
+```text
+.
+├── data/
+│   └── exports/        # Source JSON contracts used to build the site
+├── docs/               # Internal implementation notes
+├── public/             # Static assets
+├── src/
+│   ├── components/     # Astro and React UI
+│   ├── layouts/        # Shared page shells
+│   ├── lib/            # Export readers, catalog/search payload builders, helpers
+│   ├── pages/          # Astro routes and JSON/XML endpoints
+│   └── styles/         # Global styles
+├── astro.config.mjs
+├── package.json
+└── wrangler.jsonc
+```
+
+## Data Model
+
+The app is driven by exported JSON files in `data/exports`, including:
+
+- `products.json`
+- `integrations.json`
+- `platforms.json`
+- `hubs.json`
+- `manufacturers.json`
+- `protocols.json`
+- `categories.json`
+- `site.json`
+- `search.json`
+- `sitemap.json`
+- `types.ts`
+
+At runtime, the site reads these exports through `src/lib/exports.ts`. The source can be:
+
+- `local`: read from `data/exports`
+- `remote`: fetched from `CMS_EXPORTS_URL`
+
+## Getting Started
+
+### Requirements
+
+- Node.js `>=24.12.0`
+- `pnpm` `10.33.0` or compatible
+
+### Install
 
 ```sh
 pnpm install
+```
+
+### Run Locally
+
+```sh
 pnpm dev
 ```
 
-Local environment defaults live in `.env`, and the tracked template is `.env.example`.
+Open the local Astro server URL shown in the terminal.
 
-## Environment
+## Environment Variables
+
+Copy `.env.example` to `.env` and adjust as needed.
 
 ```dotenv
 PUBLIC_SITE_URL=https://smartpicker.io
@@ -20,43 +93,55 @@ EXPORTS_DIR=./data/exports
 CMS_EXPORTS_URL=
 ```
 
-- `PUBLIC_SITE_URL` powers the Astro `site` setting for canonical URLs and sitemap generation.
-- `EXPORTS_SOURCE=local` reads JSON exports from the filesystem during development.
-- `CMS_EXPORTS_URL` is only needed when `EXPORTS_SOURCE=remote`.
+- `PUBLIC_SITE_URL` sets the canonical site URL used by Astro and sitemap generation
+- `EXPORTS_SOURCE` chooses `local` or `remote` export loading
+- `EXPORTS_DIR` points to the local export directory when using `local`
+- `CMS_EXPORTS_URL` is required when `EXPORTS_SOURCE=remote`
 
-## Project Structure
+## Available Scripts
 
-```text
-/
-├── data/
-├── docs/
-├── public/
-├── src/
-│   ├── layouts/
-│   ├── lib/
-│   ├── pages/
-│   └── styles/
-└── package.json
+| Command | Description |
+| --- | --- |
+| `pnpm dev` | Start the Astro development server |
+| `pnpm build` | Build the production site into `dist/` |
+| `pnpm preview` | Preview the production build locally |
+| `pnpm cf:pages:dev` | Build and serve the site with Cloudflare Pages locally |
+| `pnpm cf:pages:deploy` | Build and deploy `dist/` to Cloudflare Pages |
+| `pnpm generate-types` | Regenerate Wrangler type definitions |
+| `pnpm format` | Format the repository with Prettier |
+| `pnpm format:check` | Check formatting without writing changes |
+| `pnpm lint` | Run ESLint |
+| `pnpm lint:fix` | Run ESLint with autofixes |
+| `pnpm check` | Run Astro and TypeScript checks |
+| `pnpm validate` | Run format check, lint, Astro checks, and build |
+
+## Key Routes
+
+- `/` home page with featured catalog content
+- `/devices` main filterable device catalog
+- `/devices/[slug]` device detail pages
+- `/integrations`, `/platforms`, `/hubs`, `/manufacturers`, `/protocols`, `/categories`
+- `/catalog.json` prerendered catalog payload for the device browser
+- `/search.json` prerendered global search payload
+- `/sitemap.xml` sitemap output
+
+## Architecture Notes
+
+- `src/pages` contains the route layer
+- `src/lib/catalog/server.ts` builds the filterable catalog payload from exports
+- `src/lib/search/server.ts` builds the global search payload
+- React islands power interactive UI, while Astro handles static rendering
+- The build does not depend on live database queries in the page layer
+
+## Deployment
+
+This project is set up for Cloudflare Pages and outputs a static `dist/` directory.
+
+Typical deployment flow:
+
+```sh
+pnpm build
+pnpm cf:pages:deploy
 ```
 
-## Commands
-
-| Command                | Action                                                 |
-| :--------------------- | :----------------------------------------------------- |
-| `pnpm dev`             | Start the local Astro dev server                       |
-| `pnpm build`           | Build the static production bundle                     |
-| `pnpm preview`         | Preview the production build locally                   |
-| `pnpm cf:pages:dev`    | Build the site and serve the static output with Pages  |
-| `pnpm cf:pages:deploy` | Build the site and deploy it with Wrangler Pages       |
-| `pnpm format`          | Format the repo with Prettier                          |
-| `pnpm lint`            | Run ESLint across Astro, JS, and TS files              |
-| `pnpm check`           | Run `astro check` for Astro and TypeScript diagnostics |
-| `pnpm validate`        | Run formatting, linting, type checks, and build        |
-| `pnpm generate-types`  | Regenerate Wrangler worker type definitions            |
-
-## Notes
-
-- The project now builds to a plain static `dist/` directory.
-- `wrangler.jsonc` is configured for Cloudflare Pages using `pages_build_output_dir`.
-- Create a Pages project once with `pnpm wrangler pages project create`, then use `pnpm cf:pages:deploy` for direct uploads.
-- Sitemap generation is enabled and uses `PUBLIC_SITE_URL`.
+`wrangler.jsonc` contains the Pages configuration, and `PUBLIC_SITE_URL` should match the deployed domain for correct canonical URLs and sitemap entries.
