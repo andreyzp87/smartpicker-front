@@ -2,8 +2,6 @@
 import CatalogSection from "../../components/devices/CatalogSection.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
-import ButtonLink from "../../components/ui/ButtonLink.astro";
-import DetailSidebarCard from "../../components/ui/DetailSidebarCard.astro";
 import EntityDetailHero from "../../components/ui/EntityDetailHero.astro";
 import EntityLinkList from "../../components/ui/EntityLinkList.astro";
 import SectionHeader from "../../components/ui/SectionHeader.astro";
@@ -13,7 +11,6 @@ import {
 } from "../../lib/catalog/core";
 import { getCatalogPayload } from "../../lib/catalog/server";
 import { readExportJson } from "../../lib/exports";
-import { formatProtocolLabel } from "../../lib/ui";
 
 interface EntityRef {
   id: number;
@@ -50,19 +47,6 @@ interface CategoryDetailResponse {
   category: CategoryDetail;
 }
 
-interface ProductSummary {
-  slug: string;
-  name: string;
-  manufacturer: EntityRef | null;
-  model: string | null;
-  primaryProtocol: string | null;
-  compatibleHubSlugs: string[];
-}
-
-interface ProductsExport {
-  products: ProductSummary[];
-}
-
 export async function getStaticPaths() {
   const paths = await readExportJson<CategoryPathsExport>(
     "categories/paths.json",
@@ -86,16 +70,13 @@ if (slugSegments.length === 0) {
 }
 
 const categoryPath = slugSegments.join("/");
-const detail = await readExportJson<CategoryDetailResponse>(
-  `categories/${categoryPath}.json`,
-);
-const products = await readExportJson<ProductsExport>("products.json");
-const catalogPayload = await getCatalogPayload();
+const [paths, detail, catalogPayload] = await Promise.all([
+  readExportJson<CategoryPathsExport>("categories/paths.json"),
+  readExportJson<CategoryDetailResponse>(`categories/${categoryPath}.json`),
+  getCatalogPayload(),
+]);
 
 const category = detail.category;
-const mappedProducts = products.products.filter((product) =>
-  category.deviceSlugs.includes(product.slug),
-);
 const formatCount = new Intl.NumberFormat("en-US");
 const breadcrumbItems = [
   { href: "/", label: "Home" },
@@ -106,18 +87,17 @@ const breadcrumbItems = [
   })),
   { label: category.name },
 ];
-const updatedLabel = category.updatedAt
-  ? new Date(category.updatedAt).toLocaleDateString("en-US", {
-      dateStyle: "medium",
-    })
-  : "Unknown";
-const exportGenerated = new Date(detail.generated).toLocaleDateString("en-US", {
-  dateStyle: "medium",
-});
 const summaryText =
   category.children.length > 0
     ? `${category.name} includes ${category.children.length} subcategorie${category.children.length === 1 ? "y" : "s"} and ${category.deviceCount} device${category.deviceCount === 1 ? "" : "s"} in total.`
     : `${category.name} includes ${category.deviceCount} device${category.deviceCount === 1 ? "" : "s"} in this category.`;
+const lockedCategoryPaths = paths.categories
+  .filter(
+    (entry) =>
+      entry.path === category.path ||
+      entry.path.startsWith(`${category.path}/`),
+  )
+  .map((entry) => entry.path);
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -130,20 +110,14 @@ const initialCatalog = getCatalogResults(
   catalogPayload,
   createDefaultCatalogState(),
   "",
-  { categories: [category.path] },
-  12,
+  { categories: lockedCategoryPaths },
+  20,
 );
 const subcategoryItems = category.children.map((child) => ({
   href: `/categories/${[...category.pathSegments, child.slug].join("/")}`,
   label: child.name,
   icon: "#",
   meta: child.slug,
-}));
-const categoryDeviceItems = mappedProducts.map((product) => ({
-  href: `/devices/${product.slug}`,
-  label: product.name,
-  icon: product.model?.slice(0, 2).toUpperCase() ?? "SP",
-  meta: `${product.manufacturer?.name ?? "Unknown manufacturer"} · ${product.model ?? "Model TBD"}${product.primaryProtocol ? ` · ${formatProtocolLabel(product.primaryProtocol)}` : ""}`,
 }));
 ---
 
@@ -177,61 +151,19 @@ const categoryDeviceItems = mappedProducts.map((product) => ({
       ]}
     />
 
-    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div class="flex flex-col gap-6">
-        <section class="animate-fade-in">
-          <SectionHeader
-            eyebrow="Hierarchy"
-            title="Subcategories"
-            description="Use subcategories to narrow your search when you want a more specific product type."
-          />
-          <EntityLinkList
-            items={subcategoryItems}
-            emptyText="No subcategories are currently listed beneath this category."
-            variant="content"
-          />
-        </section>
-
-        <section class="animate-fade-in">
-          <SectionHeader
-            eyebrow="Membership"
-            title="Devices in this category"
-            description="Browse the devices currently listed in this category and jump directly into their compatibility details."
-          />
-          <EntityLinkList
-            items={categoryDeviceItems}
-            emptyText="No devices are currently listed in this category."
-            variant="content"
-          />
-        </section>
-      </div>
-
-      <aside class="flex flex-col gap-6 max-lg:order-first">
-        <div class="animate-fade-in" style="animation-delay:0.1s">
-          <DetailSidebarCard
-            title="Category Info"
-            rows={[
-              {
-                label: "Path",
-                value: category.path,
-                mono: true,
-              },
-              {
-                label: "Updated",
-                value: updatedLabel,
-              },
-              {
-                label: "Catalog refreshed",
-                value: exportGenerated,
-              },
-            ]}
-          />
-        </div>
-
-        <ButtonLink href="/devices" variant="secondary" class="justify-center">
-          Browse all devices →
-        </ButtonLink>
-      </aside>
+    <div class="pb-6">
+      <section class="animate-fade-in">
+        <SectionHeader
+          eyebrow="Hierarchy"
+          title="Subcategories"
+          description="Use subcategories to narrow your search when you want a more specific product type."
+        />
+        <EntityLinkList
+          items={subcategoryItems}
+          emptyText="No subcategories are currently listed beneath this category."
+          variant="content"
+        />
+      </section>
     </div>
 
     <CatalogSection
@@ -256,7 +188,7 @@ const categoryDeviceItems = mappedProducts.map((product) => ({
       }}
       uiConfig={{
         hiddenSections: { categories: true },
-        lockedFilters: { categories: [category.path] },
+        lockedFilters: { categories: lockedCategoryPaths },
       }}
     />
   </div>

@@ -134,7 +134,7 @@ export default function DeviceCatalogBrowser({
   const catalogEndpoint = endpoints?.catalog ?? "/catalog.json";
   const searchEndpoint = endpoints?.search ?? "/search.json";
   const autoloadMode = endpoints?.autoloadMode ?? "idle";
-  const pageSize = uiConfig?.pageSize ?? 12;
+  const pageSize = uiConfig?.pageSize ?? 20;
   const hiddenSections = uiConfig?.hiddenSections;
   const lockedFilters = uiConfig?.lockedFilters;
   const {

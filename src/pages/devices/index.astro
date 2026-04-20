@@ -37,7 +37,7 @@ const initialCatalog = getCatalogResults(
   createDefaultCatalogState(),
   "",
   undefined,
-  12,
+  20,
 );
 
 const formatCount = new Intl.NumberFormat("en-US");
@@ -84,7 +84,7 @@ const formatCount = new Intl.NumberFormat("en-US");
           featureCounts,
         }}
         endpoints={{ catalog: "/catalog.json", autoloadMode: "scroll" }}
-        uiConfig={{ pageSize: 12 }}
+        uiConfig={{ pageSize: 20 }}
       />
     </section>
   </div>

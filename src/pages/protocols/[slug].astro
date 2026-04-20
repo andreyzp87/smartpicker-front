@@ -103,7 +103,7 @@ const initialCatalog = getCatalogResults(
   createDefaultCatalogState(),
   "",
   { protocols: [protocol.slug] },
-  12,
+  20,
 );
 const style = getProtocolStyle(protocol.slug);
 const formatCount = new Intl.NumberFormat("en-US");
@@ -164,18 +164,7 @@ const snapshotMetrics = [
       pretitle="Protocol detail"
       title={protocol.title}
       description={protocol.description}
-      stats={[
-        { value: formatCount.format(protocol.deviceCount), label: "Devices" },
-        {
-          value: formatCount.format(protocol.integrationCount),
-          label: "Integrations",
-        },
-        {
-          value: formatCount.format(protocol.platformCount),
-          label: "Platforms",
-        },
-        { value: formatCount.format(protocol.hubCount), label: "Hubs" },
-      ]}
+      stats={[]}
     >
       <div
         slot="icon"

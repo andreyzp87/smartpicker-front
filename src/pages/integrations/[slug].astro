@@ -2,7 +2,6 @@
 import type {
   IntegrationDetailResponse,
   IntegrationSlugsResponse,
-  ProductsIndexResponse,
 } from "../../../data/exports/types";
 import CatalogSection from "../../components/devices/CatalogSection.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
@@ -39,19 +38,9 @@ if (!slug) {
 const detail = await readExportJson<IntegrationDetailResponse>(
   `integrations/${slug}.json`,
 );
-const products = await readExportJson<ProductsIndexResponse>("products.json");
 const catalogPayload = await getCatalogPayload();
 
 const integration = detail.integration;
-const productBySlug = new Map(
-  products.products.map((product) => [product.slug, product]),
-);
-const compatibleProducts = integration.compatibleDeviceSlugs
-  .map((deviceSlug) => productBySlug.get(deviceSlug))
-  .filter((product): product is ProductsIndexResponse["products"][number] =>
-    Boolean(product),
-  )
-  .slice(0, 8);
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -65,7 +54,7 @@ const initialCatalog = getCatalogResults(
   createDefaultCatalogState(),
   "",
   { integrations: [integration.slug] },
-  12,
+  20,
 );
 const formatCount = new Intl.NumberFormat("en-US");
 const updatedLabel = new Date(integration.updatedAt).toLocaleDateString(
@@ -132,7 +121,7 @@ const linkedPlatformCards = integration.platforms.map((platform) => ({
       ]}
     />
 
-    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1.55fr)_320px]">
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_320px]">
       <div class="flex flex-col gap-6">
         <EntityCardGridSection
           eyebrow="Platforms"
@@ -155,44 +144,38 @@ const linkedPlatformCards = integration.platforms.map((platform) => ({
           />
         </section>
 
-        <section>
-          <SectionHeader
-            eyebrow="Hardware"
-            title="Hardware hints"
-            description="Optional infrastructure notes that help explain setup requirements."
-          />
-          <div class="grid gap-3 md:grid-cols-2">
-            {
-              integration.hardwareHints.length > 0 ? (
-                integration.hardwareHints.map((hint) => (
-                  <div class="border-theme bg-surface rounded-2xl border p-5">
-                    <div class="text-primary text-base font-semibold">
-                      <a href={`/devices/${hint.product.slug}`}>
-                        {hint.product.name}
-                      </a>
-                    </div>
-                    <div class="text-muted mt-1 text-sm">
-                      {hint.manufacturer?.name ?? "Unknown manufacturer"} ·{" "}
-                      {hint.category?.name ?? "Uncategorized"}
-                    </div>
-                    <div class="border-theme bg-badge text-secondary mt-3 rounded-md border px-3 py-1 text-[12px] font-medium">
-                      {sentenceCase(hint.requirementType.replace(/_/g, " "))}
-                    </div>
-                    {hint.note && (
-                      <p class="text-secondary mt-3 text-sm leading-relaxed">
-                        {hint.note}
-                      </p>
-                    )}
+        {integration.hardwareHints.length > 0 && (
+          <section>
+            <SectionHeader
+              eyebrow="Hardware"
+              title="Hardware hints"
+              description="Optional infrastructure notes that help explain setup requirements."
+            />
+            <div class="grid gap-3 md:grid-cols-2">
+              {integration.hardwareHints.map((hint) => (
+                <div class="border-theme bg-surface rounded-2xl border p-5">
+                  <div class="text-primary text-base font-semibold">
+                    <a href={`/devices/${hint.product.slug}`}>
+                      {hint.product.name}
+                    </a>
                   </div>
-                ))
-              ) : (
-                <div class="border-theme bg-surface text-muted rounded-2xl border px-5 py-6 text-sm md:col-span-2">
-                  No setup notes are listed for this integration yet.
+                  <div class="text-muted mt-1 text-sm">
+                    {hint.manufacturer?.name ?? "Unknown manufacturer"} ·{" "}
+                    {hint.category?.name ?? "Uncategorized"}
+                  </div>
+                  <div class="border-theme bg-badge text-secondary mt-3 rounded-md border px-3 py-1 text-[12px] font-medium">
+                    {sentenceCase(hint.requirementType.replace(/_/g, " "))}
+                  </div>
+                  {hint.note && (
+                    <p class="text-secondary mt-3 text-sm leading-relaxed">
+                      {hint.note}
+                    </p>
+                  )}
                 </div>
-              )
-            }
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       <aside class="flex flex-col gap-6">
@@ -219,30 +202,6 @@ const linkedPlatformCards = integration.platforms.map((platform) => ({
             },
           ]}
         />
-
-        <div class="border-theme bg-surface rounded-2xl border p-5">
-          <h2 class="text-primary text-lg font-semibold tracking-tight">
-            Sample devices
-          </h2>
-          <div class="mt-4 flex flex-col gap-3">
-            {
-              compatibleProducts.length > 0 ? (
-                compatibleProducts.map((product) => (
-                  <a
-                    href={`/devices/${product.slug}`}
-                    class="border-theme bg-elevated text-secondary hover:border-theme-hover hover:text-primary rounded-xl border px-4 py-3 text-sm transition-all"
-                  >
-                    {product.name}
-                  </a>
-                ))
-              ) : (
-                <div class="text-muted text-sm">
-                  No sample devices are available yet.
-                </div>
-              )
-            }
-          </div>
-        </div>
       </aside>
     </div>
 

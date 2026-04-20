@@ -2,7 +2,6 @@
 import type {
   PlatformDetailResponse,
   PlatformSlugsResponse,
-  ProductsIndexResponse,
 } from "../../../data/exports/types";
 import CatalogSection from "../../components/devices/CatalogSection.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
@@ -10,9 +9,6 @@ import Breadcrumbs from "../../components/ui/Breadcrumbs.astro";
 import DetailSidebarCard from "../../components/ui/DetailSidebarCard.astro";
 import EntityCardGridSection from "../../components/ui/EntityCardGridSection.astro";
 import EntityDetailHero from "../../components/ui/EntityDetailHero.astro";
-import EntityLinkList from "../../components/ui/EntityLinkList.astro";
-import MetricCardGrid from "../../components/ui/MetricCardGrid.astro";
-import SectionHeader from "../../components/ui/SectionHeader.astro";
 import {
   createDefaultCatalogState,
   getCatalogResults,
@@ -40,19 +36,9 @@ if (!slug) {
 const detail = await readExportJson<PlatformDetailResponse>(
   `platforms/${slug}.json`,
 );
-const products = await readExportJson<ProductsIndexResponse>("products.json");
 const catalogPayload = await getCatalogPayload();
 
 const platform = detail.platform;
-const productBySlug = new Map(
-  products.products.map((product) => [product.slug, product]),
-);
-const compatibleProducts = platform.compatibleDeviceSlugs
-  .map((deviceSlug) => productBySlug.get(deviceSlug))
-  .filter((product): product is ProductsIndexResponse["products"][number] =>
-    Boolean(product),
-  )
-  .slice(0, 8);
 const featureCounts = Object.fromEntries(
   catalogPayload.facets.features.map((feature) => [feature.key, feature.count]),
 ) as {
@@ -66,26 +52,16 @@ const initialCatalog = getCatalogResults(
   createDefaultCatalogState(),
   "",
   { platforms: [platform.slug] },
-  12,
+  20,
 );
 const formatCount = new Intl.NumberFormat("en-US");
 const updatedLabel = new Date(platform.updatedAt).toLocaleDateString("en-US", {
   dateStyle: "medium",
 });
-const statusMetrics = Object.entries(platform.statusBreakdown).map(
-  ([status, count]) => ({
-    value: formatCount.format(count),
-    label: sentenceCase(status),
-  }),
-);
 const linkedIntegrationCards = platform.integrations.map((integration) => ({
   href: `/integrations/${integration.slug}`,
   title: integration.name,
   meta: integration.slug,
-}));
-const sampleDeviceItems = compatibleProducts.map((product) => ({
-  href: `/devices/${product.slug}`,
-  label: product.name,
 }));
 ---
 
@@ -132,7 +108,7 @@ const sampleDeviceItems = compatibleProducts.map((product) => ({
       ]}
     />
 
-    <div class="grid gap-6 pb-20 lg:grid-cols-[minmax(0,1.55fr)_320px]">
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1.55fr)_320px]">
       <div class="flex flex-col gap-6">
         <EntityCardGridSection
           eyebrow="Integrations"
@@ -141,36 +117,6 @@ const sampleDeviceItems = compatibleProducts.map((product) => ({
           items={linkedIntegrationCards}
           emptyText="No integrations are listed for this platform yet."
         />
-
-        <section>
-          <SectionHeader
-            eyebrow="Coverage"
-            title="Status breakdown"
-            description="Compatibility status across the devices that work with this platform."
-          />
-          <MetricCardGrid
-            items={statusMetrics}
-            tone="accent"
-            emptyMessage="No status breakdown is available for this platform yet."
-          />
-        </section>
-
-        <section>
-          <SectionHeader
-            eyebrow="Explanation"
-            title="Why this platform is listed"
-            description="Platforms appear when supported integrations bring devices into a broader ecosystem."
-          />
-          <div
-            class="border-theme bg-surface text-secondary rounded-2xl border p-5 text-sm leading-relaxed"
-          >
-            {
-              platform.integrations.length > 0
-                ? `${platform.name} appears on SmartPicker because support is available through ${platform.integrations.map((integration) => integration.name).join(", ")}. Browse those integrations to see the exact path into the platform.`
-                : `${platform.name} is listed here, but linked integrations have not been added yet.`
-            }
-          </div>
-        </section>
       </div>
 
       <aside class="flex flex-col gap-6">
@@ -194,12 +140,6 @@ const sampleDeviceItems = compatibleProducts.map((product) => ({
               external: Boolean(platform.website),
             },
           ]}
-        />
-
-        <EntityLinkList
-          title="Sample devices"
-          items={sampleDeviceItems}
-          emptyText="No sample devices are available yet."
         />
       </aside>
     </div>
